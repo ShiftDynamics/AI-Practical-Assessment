@@ -4,12 +4,129 @@
  */
 (() => {
 'use strict';
-const PROJECT_URL = 'https://htqoiegerivtlgmewwwt.supabase.co';
-const PUBLISHABLE_KEY = 'sb_publishable_6235lirtp6IvcMogMPvGSA_z5EAO_Hb';
+const PROJECT_URL = 'https://fcaqzxrklnmvsewdnvzk.supabase.co';
+const PUBLISHABLE_KEY = 'sb_publishable_oPhrp0skftb6RrIirsbZYg_48gOU2Rm';
 const FILE_LIMIT = 10 * 1024 * 1024;
+const I18N_STORAGE_KEY = 'sd_assessment_language';
+const I18N = {
+ ko: {
+  heroTitle:'AI 활용 역량 검사',step1:'01 · 로그인',step2:'02 · 실무 과제 수행',step3:'03 · 결과물 제출',
+  loginTitle:'시험 로그인',loginHelp:'담당자로부터 발급받은 아이디와 비밀번호로 로그인하세요.',
+  loginIdLabel:'아이디 또는 관리자 이메일',passwordLabel:'비밀번호',signIn:'로그인 →',signOut:'로그아웃',
+  loginPlaceholder:'SD-2026-001',passwordPlaceholder:'비밀번호',
+  assignedTitle:'배정된 시험',securityTitle:'시험 문제 보안 안내',
+  securityBody:'시험 문제와 첨부자료를 외부에 유출하거나 복사·촬영·배포·공유하는 행위를 금지합니다.',
+  supportPrefix:'오류 및 문의사항이 발생할 경우,',supportSuffix:'로 남겨주세요.',
+  leaveWarning:'시험 진행 중 새로고침·로그아웃·페이지 이탈 시 재접속할 수 없습니다.',
+  timeRemaining:'남은 시간',examHelp:'AI 도구를 활용하여 실무 문제를 해결하고, 과정과 결과물을 제출하세요.',
+  questionList:'문항 목록',answerLabel:'답안 작성 / AI 활용 과정 및 결과',
+  answerPlaceholder:'문제 해결 과정, AI 사용 방법, 결과 검증 및 최종 결론',fileLabel:'결과물 첨부',
+  savePending:'자동저장 대기',previous:'← 이전',saveDraft:'임시저장',next:'다음 →',submit:'시험 최종 제출 →',
+  finishedTitle:'시험이 종료되었습니다.\n좋은 결과 있으시길 바랍니다.',
+  finishedHelp:'제출된 시험 문제와 답안은 다시 열람할 수 없습니다.',
+  questionAsProvided:'시험 문항과 참고자료는 관리자가 등록한 원문으로 제공됩니다.',
+  candidateRole:'후보자',welcome:'{name}님, 배정된 시험을 확인하세요.',noAssigned:'배정된 시험이 없습니다.',
+  period:'응시 기간',duration:'제한시간',startExam:'시험 시작',question:'문항',characters:'자',
+  statusActive:'진행 중',statusSubmitted:'제출 완료',statusTimedOut:'시간 만료',statusTerminated:'응시 이탈 종료',
+  statusWaiting:'응시 대기',statusExpired:'응시기간 종료',statusAvailable:'응시 가능',
+  signOutConfirm:'시험 도중 로그아웃하면 제출 및 종료 처리되어 다시 응시할 수 없습니다. 계속하시겠습니까?',
+  logoutFail:'답안을 종료 저장하지 못했습니다. 다시 시도하세요.',
+  loginFail:'로그인에 실패했습니다. 아이디와 비밀번호를 확인하세요.',
+  sessionFail:'로그인 상태 확인 실패',startConfirm:'시험을 시작하면 제한시간이 진행됩니다. 새로고침·로그아웃·이탈 시 재접속이 차단됩니다. 시작하시겠습니까?',
+  questionLoadFail:'시험 문제를 불러오지 못했습니다. 관리자에게 문의하세요.',
+  saveWaiting:'저장 대기',saveError:'저장 오류',saveDone:'서버 저장 완료',saveAvailable:'자동저장 사용',
+  savedNotice:'현재 문항을 서버에 저장했습니다.',saveClosed:'시험이 이미 종료되어 답안을 저장할 수 없습니다.',
+  switchError:'답안을 저장하지 못해 문항을 이동하지 않았습니다.',
+  maxFiles:'한 문항에 파일은 최대 10개까지 첨부할 수 있습니다.',uploading:'첨부파일 업로드 중',
+  overSize:'10MB를 초과했습니다.',uploadFail:'첨부파일 업로드/저장 실패',
+  attachmentLink:'파일 보기 / 다운로드',previewFail:'미리보기 불가',removeFile:'첨부 목록에서 제거',
+  submitConfirm:'최종 제출하면 답안을 다시 확인하거나 수정할 수 없습니다. 제출하시겠습니까?',finishFail:'시험 종료에 실패했습니다.',
+ },
+ en: {
+  heroTitle:'AI Competency Assessment',step1:'01 · Sign in',step2:'02 · Complete the task',step3:'03 · Submit your work',
+  loginTitle:'Assessment Sign-in',loginHelp:'Sign in with the user ID and password provided by the recruitment team.',
+  loginIdLabel:'User ID or administrator email',passwordLabel:'Password',signIn:'Sign in →',signOut:'Sign out',
+  loginPlaceholder:'SD-2026-001',passwordPlaceholder:'Password',
+  assignedTitle:'Assigned Assessments',securityTitle:'Assessment Confidentiality',
+  securityBody:'Copying, photographing, distributing, sharing, or disclosing assessment questions and reference materials externally is prohibited.',
+  supportPrefix:'For technical issues or inquiries, contact',supportSuffix:'.',
+  leaveWarning:'Refreshing, signing out, or leaving this page during the assessment will prevent re-entry.',
+  timeRemaining:'Time remaining',examHelp:'Use AI tools to solve the practical task, and submit your approach and final deliverables.',
+  questionList:'Questions',answerLabel:'Your answer / AI workflow and results',
+  answerPlaceholder:'Describe your approach, how you used AI, how you verified the results, and your final conclusion.',fileLabel:'Attach deliverables',
+  savePending:'Waiting to save',previous:'← Previous',saveDraft:'Save draft',next:'Next →',submit:'Submit assessment →',
+  finishedTitle:'Your assessment has ended.\nWe wish you the best.',
+  finishedHelp:'The submitted questions and answers are no longer available for review.',
+  questionAsProvided:'Questions and reference files are shown in the original language provided by the administrator.',
+  candidateRole:'Candidate',welcome:'{name}, please review your assigned assessments.',noAssigned:'No assessments have been assigned.',
+  period:'Available',duration:'Time limit',startExam:'Start assessment',question:'Question',characters:'characters',
+  statusActive:'In progress',statusSubmitted:'Submitted',statusTimedOut:'Time expired',statusTerminated:'Ended due to interruption',
+  statusWaiting:'Not yet available',statusExpired:'Availability ended',statusAvailable:'Available now',
+  signOutConfirm:'Signing out during an assessment will close it and prevent re-entry. Continue?',
+  logoutFail:'Could not save and end your assessment. Please try again.',
+  loginFail:'Sign-in failed. Check your user ID and password.',
+  sessionFail:'Could not verify your sign-in session',startConfirm:'Starting the assessment will begin the time limit. You cannot re-enter after refreshing, signing out, or leaving. Start now?',
+  questionLoadFail:'Could not load assessment questions. Contact the recruitment team.',
+  saveWaiting:'Pending save',saveError:'Save error',saveDone:'Saved to server',saveAvailable:'Autosave enabled',
+  savedNotice:'This answer has been saved to the server.',saveClosed:'The assessment has ended. Your answer can no longer be saved.',
+  switchError:'Unable to move to the next question because your answer could not be saved.',
+  maxFiles:'You can attach up to 10 files per question.',uploading:'Uploading attachments',
+  overSize:'exceeds 10 MB.',uploadFail:'File upload or save failed',
+  attachmentLink:'View / download file',previewFail:'Preview unavailable',removeFile:'Remove attachment',
+  submitConfirm:'Once submitted, you cannot view or edit your answers. Submit now?',finishFail:'Could not finalize the assessment.',
+ }
+};
+let selectedLanguage = (() => { try { return localStorage.getItem(I18N_STORAGE_KEY) === 'en' ? 'en' : 'ko'; } catch { return 'ko'; } })();
+function language(){ return profile?.role === 'admin' ? 'ko' : selectedLanguage; }
+function tr(key, values={}){
+ let msg=I18N[language()][key] ?? I18N.ko[key] ?? key;
+ return Object.entries(values).reduce((v,[k,val])=>v.replaceAll(`{${k}}`,String(val)),msg);
+}
+function translateSaveIndicator(){
+ const el=$('autosave-state');if(!el)return;
+ const old=el.textContent || '';
+ const prefix={
+  '자동저장 대기':'savePending','Waiting to save':'savePending',
+  '저장 대기':'saveWaiting','Pending save':'saveWaiting',
+  '자동저장 사용':'saveAvailable','Autosave enabled':'saveAvailable',
+  '첨부파일 업로드 중':'uploading','Uploading attachments':'uploading'
+ };
+ if(prefix[old])el.textContent=tr(prefix[old]);
+ else if(/^(서버 저장 완료|Saved to server) · /.test(old))el.textContent=tr('saveDone')+old.slice(old.indexOf(' · '));
+ else if(/^(저장 오류|Save error): /.test(old))el.textContent=tr('saveError')+old.slice(old.indexOf(':'));
+}
+function applyLanguage(){
+ const current=language(); document.documentElement.lang=current;
+ document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=tr(el.dataset.i18n).replace(/\\n/g,'\n');});
+ document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{el.placeholder=tr(el.dataset.i18nPlaceholder);});
+ document.querySelectorAll('.language-choice').forEach(btn=>{btn.setAttribute('aria-pressed',String(btn.dataset.lang===current));});
+ translateSaveIndicator();
+ const switcher=$('language-switch');
+ if(switcher)switcher.hidden=profile?.role==='admin'||!['login','candidate','exam','finished'].some(v=>!$(v+'-view').hidden);
+ const user=$('header-user');if(user&&profile)user.textContent=`${profile.display_name} · ${profile.role==='admin'?'관리자':tr('candidateRole')}`;
+ if(profile?.role==='candidate'&&!$('candidate-view').hidden){
+   $('candidate-welcome').textContent=tr('welcome',{name:profile.display_name});renderCandidateList();
+ }
+ if(active&&!$('exam-view').hidden){
+   const q=activeQuestions[currentIndex];if(q){
+     $('answer-count').textContent=`${$('answer-input').value.length} ${tr('characters')}`;
+     $('question-index-label').textContent=`${tr('question').toUpperCase()} ${String(currentIndex+1).padStart(2,'0')}`;
+     const nav=$('question-nav');blank(nav);
+     activeQuestions.forEach((item,i)=>nav.append(action(`${tr('question')} ${i+1}${activeAnswers[item.id]?.content?' ✓':''}`,()=>switchQuestion(i),'question-button'+(currentIndex===i?' active':''))));
+   }
+ }
+ // Changing a display language never starts, saves, submits, or resets an attempt.
+}
+function selectLanguage(v){
+ if(!['ko','en'].includes(v)||profile?.role==='admin')return;
+ selectedLanguage=v;
+ try{localStorage.setItem(I18N_STORAGE_KEY,v);}catch{}
+ applyLanguage();
+}
+
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt = d => d ? new Date(d).toLocaleString('ko-KR',{hour12:false}) : '—';
+const fmt = d => d ? new Date(d).toLocaleString(language()==='en'?'en-US':'ko-KR',{hour12:false}) : '—';
 const now = () => Date.now();
 const uuid = () => crypto.randomUUID();
 const slug = s => String(s).replace(/[^a-zA-Z0-9가-힣_.-]/g,'_').slice(0,65);
@@ -21,12 +138,12 @@ let timerExpired=false;
 const closedStatuses = ['submitted','timed_out','terminated'];
 function notice(msg, bad=false){ const e=$('notice');e.textContent=msg;e.className='notice'+(bad?' error':'');e.hidden=false;window.scrollTo({top:0,behavior:'smooth'}); }
 function clearNotice(){ $('notice').hidden=true; }
-function view(name){['setup','login','admin','candidate','exam','finished'].forEach(k=>$(k+'-view').hidden=k!==name); $('header-actions').hidden=['setup','login'].includes(name); $('header-user').textContent=profile?`${profile.display_name} · ${profile.role==='admin'?'관리자':'후보자'}`:'';clearNotice();window.scrollTo(0,0);}
+function view(name){['setup','login','admin','candidate','exam','finished'].forEach(k=>$(k+'-view').hidden=k!==name); $('header-actions').hidden=['setup','login'].includes(name);applyLanguage();clearNotice();window.scrollTo(0,0);}
 function check({data,error}) {if(error) throw error;return data;}
 function bool(v){return !!v;}
 function ensureAdmin(){if(profile?.role!=='admin') throw Error('관리자 전용 기능입니다.');}
 function setBusy(form,b){form?.classList.toggle('loading',b);}
-function labelStatus(a,t){if(t){return ({active:'진행 중',submitted:'제출 완료',timed_out:'시간 만료',terminated:'응시 이탈 종료'})[t.status]||t.status;} if(now()<new Date(a.available_from).getTime())return '응시 대기';if(now()>=new Date(a.available_until).getTime())return '응시기간 종료';return '응시 가능';}
+function labelStatus(a,t){if(t){return ({active:'statusActive',submitted:'statusSubmitted',timed_out:'statusTimedOut',terminated:'statusTerminated'})[t.status]?tr(({active:'statusActive',submitted:'statusSubmitted',timed_out:'statusTimedOut',terminated:'statusTerminated'})[t.status]):t.status;} if(now()<new Date(a.available_from).getTime())return tr('statusWaiting');if(now()>=new Date(a.available_until).getTime())return tr('statusExpired');return tr('statusAvailable');}
 function getAttempt(id){return all.attempts.find(t=>t.assignment_id===id);}
 function getTemplate(id){return all.templates.find(t=>t.id===id);}
 function getCandidate(id){return all.profiles.find(p=>p.id===id);}
@@ -41,9 +158,10 @@ async function init(){
  api=window.supabase.createClient(PROJECT_URL,PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
  bindEvents();
  try{const {data:{session:s}}=await api.auth.getSession();if(s)await afterAuth(s);else view('login');}
- catch(err){view('login');notice(`로그인 상태 확인 실패: ${errorMessage(err)}`,true);}
+ catch(err){view('login');notice(`${tr('sessionFail')}: ${errorMessage(err)}`,true);}
 }
 function bindEvents(){
+ document.querySelectorAll('.language-choice').forEach(b=>b.addEventListener('click',()=>selectLanguage(b.dataset.lang)));
  $('login-form').addEventListener('submit',login);
  $('logout-btn').addEventListener('click',logout);$('finished-logout').addEventListener('click',logout);
  document.querySelectorAll('.admin-tab').forEach(b=>b.addEventListener('click',()=>selectTab(b.dataset.tab)));
@@ -55,7 +173,7 @@ function bindEvents(){
  $('save-answer').addEventListener('click',()=>saveDraft(true));
  $('prev-question').addEventListener('click',()=>switchQuestion(currentIndex-1));
  $('next-question').addEventListener('click',()=>switchQuestion(currentIndex+1));
- $('answer-input').addEventListener('input',()=>{if(!active)return;const q=activeQuestions[currentIndex];if(!q)return;activeAnswers[q.id]??={content:'',attachments:[]};activeAnswers[q.id].content=$('answer-input').value;changedSeq++;$('autosave-state').textContent='저장 대기';$('answer-count').textContent=`${$('answer-input').value.length}자`;scheduleSave();});
+ $('answer-input').addEventListener('input',()=>{if(!active)return;const q=activeQuestions[currentIndex];if(!q)return;activeAnswers[q.id]??={content:'',attachments:[]};activeAnswers[q.id].content=$('answer-input').value;changedSeq++;$('autosave-state').textContent=tr('saveWaiting');$('answer-count').textContent=`${$('answer-input').value.length} ${tr('characters')}`;scheduleSave();});
  $('answer-files').addEventListener('change',uploadAnswerFiles);
  $('submit-exam').addEventListener('click',()=>finishExam('submitted'));
  const t=new Date();$('assign-start').value=formatLocal(t);$('assign-end').value=formatLocal(new Date(t.getTime()+48*3600000));
@@ -68,7 +186,7 @@ async function login(ev){
  try{const raw=$('login-id').value.trim();const email=raw.includes('@')?raw:raw.toLowerCase()+'@login.shiftdynamics.ai';
  const {data,error}=await api.auth.signInWithPassword({email,password:$('login-password').value});if(error)throw error;
  $('login-password').value='';await afterAuth(data.session);
- }catch(err){notice('로그인에 실패했습니다. 아이디와 비밀번호를 확인하세요. '+errorMessage(err),true);}finally{setBusy(f,false);}
+ }catch(err){notice(tr('loginFail')+' '+errorMessage(err),true);}finally{setBusy(f,false);}
 }
 async function afterAuth(s){
  session=s;const data=check(await api.from('profiles').select('id,username,display_name,role').eq('id',s.user.id).single());profile=data;
@@ -79,8 +197,8 @@ async function afterAuth(s){
  }
 }
 async function logout(){
- if(active){if(!confirm('시험 도중 로그아웃하면 제출 및 종료 처리되어 다시 응시할 수 없습니다. 계속하시겠습니까?'))return;
-  try{await finishExam('logout',true);}catch(err){notice('답안을 종료 저장하지 못했습니다. 다시 시도하세요. '+errorMessage(err),true);return;}
+ if(active){if(!confirm(tr('signOutConfirm')))return;
+  try{await finishExam('logout',true);}catch(err){notice(tr('logoutFail')+' '+errorMessage(err),true);return;}
  }
  await api.auth.signOut();profile=null;session=null;active=null;clearInterval(tickTimer);clearTimeout(saveTimer);view('login');
 }
@@ -129,7 +247,13 @@ async function createTemplate(ev){ev.preventDefault();ensureAdmin();const form=e
   const body=editors[i].querySelector('textarea').value.trim();if(!body)throw Error(`${i+1}번 문제 내용이 없습니다.`);
   const question=check(await api.from('questions').insert({template_id:templateId,sort_order:i+1,body}).select().single());
   const att=[];for(const file of editors[i].querySelector('input[type=file]').files){if(file.size>FILE_LIMIT)throw Error(`${file.name}: 10MB 초과`);
-   const path=`${templateId}/${question.id}/${uuid()}-${slug(file.name)}`;
+
+const extension = file.name.includes('.')
+  ? file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '')
+  : '';
+
+const path = `${templateId}/${question.id}/${uuid()}${extension ? '.' + extension : ''}`;
+
    check(await api.storage.from('exam-materials').upload(path,file,{contentType:file.type||'application/octet-stream',upsert:false}));
    att.push({name:file.name,path,type:file.type,size:file.size});
   }
@@ -143,10 +267,60 @@ function renderTemplates(){const list=$('template-list');blank(list);$('template
  for(const t of all.templates){const row=newEl('div','manage-item'),info=newEl('div','manage-item-info');info.append(action(t.title,()=>showTemplate(t),'template-title-button'),newEl('small','',`${t.position} · ${all.questions.filter(q=>q.template_id===t.id).length}문항`));
  row.append(info,action('삭제',()=>deleteTemplate(t),'button button-danger button-small'));list.append(row);}
 }
-async function showTemplate(t){const box=$('template-detail');blank(box);box.hidden=false;box.append(newEl('h3','',t.title),newEl('p','muted small',t.position));
- const qs=all.questions.filter(q=>q.template_id===t.id).sort((a,b)=>a.sort_order-b.sort_order);
- for(const [i,q] of qs.entries()){const d=newEl('div','template-question');d.append(newEl('strong','',`문항 ${i+1}`),newEl('p','',q.body));box.append(d);await appendAttachmentViews(d,'exam-materials',q.attachments||[]);}
+let templateDetailRequest = 0;
+async function showTemplate(t){
+ const box=$('template-detail');
+ const requestId=++templateDetailRequest;
+ blank(box);
+ box.hidden=false;
+ box.setAttribute('aria-busy','true');
+ box.append(newEl('h3','',t.title),newEl('p','muted small',`지원 포지션: ${t.position}`));
+ const status=newEl('p','muted small','문항을 불러오는 중입니다…');
+ box.append(status);
+ try{
+  // 상세보기는 관리자 권한으로 해당 템플릿의 문항을 새로 조회합니다.
+  // 전체 목록 조회의 건수 제한이나 오래된 캐시에 의존하지 않습니다.
+  const {data,error}=await api.from('questions')
+    .select('id, template_id, sort_order, body, attachments')
+    .eq('template_id',t.id)
+    .order('sort_order',{ascending:true});
+  if(error)throw error;
+  if(requestId!==templateDetailRequest)return;
+  status.remove();
+  const qs=data||[];
+  box.append(newEl('p','template-detail-count',`총 ${qs.length}개 문항`));
+  if(!qs.length){
+   box.append(newEl('p','empty','저장된 문항이 없습니다. 템플릿 생성 과정에서 오류가 발생했는지 확인해 주세요.'));
+   return;
+  }
+  for(const [i,q] of qs.entries()){
+   if(requestId!==templateDetailRequest)return;
+   const section=newEl('section','template-question');
+   section.append(newEl('strong','template-question-number',`문항 ${i+1}`));
+   section.append(newEl('p','template-question-body',q.body||'(문항 내용 없음)'));
+   const files=Array.isArray(q.attachments)?q.attachments:[];
+   if(files.length){
+    section.append(newEl('p','template-attachment-heading',`첨부자료 (${files.length}개)`));
+    const attachments=newEl('div','attachments');
+    section.append(attachments);
+    box.append(section);
+    // 중요: 첨부파일 함수는 대상 요소의 자식들을 지우므로
+    // 문항 본문(section)이 아닌 전용 컨테이너(attachments)를 전달합니다.
+    await appendAttachmentViews(attachments,'exam-materials',files);
+   }else{
+    section.append(newEl('p','file-hint','첨부자료 없음'));
+    box.append(section);
+   }
+  }
+ }catch(err){
+  if(requestId!==templateDetailRequest)return;
+  status.textContent=`문항을 불러오지 못했습니다: ${errorMessage(err)}`;
+  status.className='notice error';
+ }finally{
+  if(requestId===templateDetailRequest)box.removeAttribute('aria-busy');
+ }
 }
+
 async function deleteTemplate(t){const count=all.assignments.filter(a=>a.template_id===t.id).length;
  if(!confirm(`${t.title} 템플릿을 삭제하면 연결된 시험 ${count}건과 답안도 삭제됩니다. 계속하시겠습니까?`))return;
  if(prompt('삭제할 시험 템플릿 이름을 정확히 입력하세요.')!==t.title)return;
@@ -183,74 +357,80 @@ function renderSubmissions(){const tbody=$('submission-rows');blank(tbody);
 async function showSubmission(a){const box=$('answer-detail');blank(box);box.hidden=false;const p=getCandidate(a.candidate_id);
  box.append(newEl('h2','',`${p?.display_name||''} · ${a.exam_title}`));
  const qs=all.questions.filter(q=>q.template_id===a.template_id).sort((x,y)=>x.sort_order-y.sort_order);
- for(const [i,q] of qs.entries()){const ans=all.answers.find(x=>x.assignment_id===a.id&&x.question_id===q.id),d=newEl('div','detail-block');d.append(newEl('strong','',`문항 ${i+1}`),newEl('p','',q.body),newEl('strong','', '후보자 답안'),newEl('p','',ans?.content||'(답안 없음)'));box.append(d);await appendAttachmentViews(d,'answer-files',ans?.attachments||[]);}
+ for(const [i,q] of qs.entries()){const ans=all.answers.find(x=>x.assignment_id===a.id&&x.question_id===q.id),d=newEl('div','detail-block');d.append(newEl('strong','',`문항 ${i+1}`),newEl('p','',q.body),newEl('strong','', '후보자 답안'),newEl('p','',ans?.content||'(답안 없음)'));box.append(d);if((ans?.attachments||[]).length){const attachments=newEl('div','attachments');d.append(attachments);await appendAttachmentViews(attachments,'answer-files',ans.attachments);}}
  box.scrollIntoView({behavior:'smooth'});
 }
 async function refreshCandidate(){
- const [ar,tr]=await Promise.all([api.from('assignments').select('*').eq('candidate_id',profile.id).order('created_at',{ascending:false}),api.from('attempts').select('*').eq('candidate_id',profile.id)]);
- all.assignments=check(ar)||[];all.attempts=check(tr)||[];
- $('candidate-welcome').textContent=`${profile.display_name}님, 배정된 시험을 확인하세요.`;renderCandidateList();
+ const [ar,attemptsResult]=await Promise.all([api.from('assignments').select('*').eq('candidate_id',profile.id).order('created_at',{ascending:false}),api.from('attempts').select('*').eq('candidate_id',profile.id)]);
+ all.assignments=check(ar)||[];all.attempts=check(attemptsResult)||[];
+ $('candidate-welcome').textContent=tr('welcome',{name:profile.display_name});renderCandidateList();
  const hasPending=all.assignments.some(a=>!getAttempt(a.id)&&now()>=new Date(a.available_from).getTime()&&now()<new Date(a.available_until).getTime());
  const allClosed=all.assignments.length>0 && all.assignments.every(a=>!!getAttempt(a.id)&&getAttempt(a.id).status!=='active');
  if(allClosed) view('finished');else view('candidate');
 }
 function renderCandidateList(){const list=$('candidate-exams');blank(list);
- if(!all.assignments.length){list.append(newEl('div','card empty','배정된 시험이 없습니다.'));return;}
- for(const a of all.assignments){const t=getAttempt(a.id),row=newEl('div','exam-list-item'),text=newEl('div');text.append(newEl('h2','',a.exam_title),newEl('p','',`응시 기간: ${fmt(a.available_from)} ~ ${fmt(a.available_until)}\n제한시간: ${a.duration_minutes}분 · ${labelStatus(a,t)}`));
- row.append(text);if(!t&&now()>=Date.parse(a.available_from)&&now()<Date.parse(a.available_until)){row.append(action('시험 시작',()=>startExam(a),'button button-primary'));}
+ if(!all.assignments.length){list.append(newEl('div','card empty',tr('noAssigned')));return;}
+ for(const a of all.assignments){const t=getAttempt(a.id),row=newEl('div','exam-list-item'),text=newEl('div');text.append(newEl('h2','',a.exam_title),newEl('p','',`${tr('period')}: ${fmt(a.available_from)} ~ ${fmt(a.available_until)}\n${tr('duration')}: ${a.duration_minutes} ${language()==='en'?'min':'분'} · ${labelStatus(a,t)}`));
+ row.append(text);if(!t&&now()>=Date.parse(a.available_from)&&now()<Date.parse(a.available_until)){row.append(action(tr('startExam'),()=>startExam(a),'button button-primary'));}
  else row.append(newEl('span','muted small',labelStatus(a,t)));
  list.append(row);
  }
 }
-async function startExam(a){if(active)return; if(!confirm('시험을 시작하면 제한시간이 진행됩니다. 새로고침·로그아웃·이탈 시 재접속이 차단됩니다. 시작하시겠습니까?'))return;
+async function startExam(a){if(active)return; if(!confirm(tr('startConfirm')))return;
  try{const t=check(await api.rpc('start_exam',{p_assignment:a.id}));
   active={...a,...t};timerExpired=false;epoch++;changedSeq=0;savedSeq=0;activeAnswers={};
   const qs=check(await api.from('questions').select('*').eq('template_id',a.template_id).order('sort_order'));
-  activeQuestions=qs||[];if(!activeQuestions.length)throw Error('시험 문제를 불러오지 못했습니다. 관리자에게 문의하세요.');
+  activeQuestions=qs||[];if(!activeQuestions.length)throw Error(tr('questionLoadFail'));
   const exam=check(await api.from('exam_templates').select('*').eq('id',a.template_id).single());
   $('exam-position-label').textContent=exam.position;$('active-exam-title').textContent=a.exam_title;
   currentIndex=0;renderQuestion();view('exam');tick();tickTimer=setInterval(tick,1000);
  }catch(err){await refreshCandidate();notice(errorMessage(err),true);}
 }
 function draftFor(q){return activeAnswers[q.id]??(activeAnswers[q.id]={content:'',attachments:[]});}
-function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveDraft(false).catch(err=>{$('autosave-state').textContent='저장 오류: '+errorMessage(err);}),900);}
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveDraft(false).catch(err=>{$('autosave-state').textContent=tr('saveError')+': '+errorMessage(err);}),900);}
 function saveDraft(showSuccess=false){if(!active)return Promise.resolve();clearTimeout(saveTimer);
  const q=activeQuestions[currentIndex];if(!q)return Promise.resolve();
  const value={...draftFor(q),attachments:[...draftFor(q).attachments]};const revision=changedSeq,assignment=active.id;
  saving=saving.catch(()=>{}).then(async()=>{
   const result=check(await api.rpc('save_exam_answer',{p_assignment:assignment,p_question:q.id,p_content:value.content,p_attachments:value.attachments}));
-  if(!result.ok){await onClosed();throw Error('시험이 이미 종료되어 답안을 저장할 수 없습니다.');}
-  savedSeq=Math.max(savedSeq,revision);if(active && active.id===assignment){$('autosave-state').textContent=`서버 저장 완료 · ${fmt(result.saved_at)}`;}
+  if(!result.ok){await onClosed();throw Error(tr('saveClosed'));}
+  savedSeq=Math.max(savedSeq,revision);if(active && active.id===assignment){$('autosave-state').textContent=`${tr('saveDone')} · ${fmt(result.saved_at)}`;}
  });
- if(showSuccess)return saving.then(()=>notice('현재 문항을 서버에 저장했습니다.'));
+ if(showSuccess)return saving.then(()=>notice(tr('savedNotice')));
  return saving;
 }
 async function switchQuestion(index){if(!active||index<0||index>=activeQuestions.length)return;
- try{await saveDraft();currentIndex=index;renderQuestion();}catch(err){notice('답안을 저장하지 못해 문항을 이동하지 않았습니다. '+errorMessage(err),true);}
+ try{await saveDraft();currentIndex=index;renderQuestion();}catch(err){notice(tr('switchError')+' '+errorMessage(err),true);}
 }
 async function renderQuestion(){const q=activeQuestions[currentIndex];if(!q)return;
- $('question-index-label').textContent=`QUESTION ${String(currentIndex+1).padStart(2,'0')}`;
+ $('question-index-label').textContent=`${tr('question').toUpperCase()} ${String(currentIndex+1).padStart(2,'0')}`;
  $('question-title').textContent=q.body;$('progress-label').textContent=`${currentIndex+1} / ${activeQuestions.length} 문항`;
- const draft=draftFor(q);$('answer-input').value=draft.content;$('answer-count').textContent=`${draft.content.length}자`;$('autosave-state').textContent='자동저장 사용';
+ const draft=draftFor(q);$('answer-input').value=draft.content;$('answer-count').textContent=`${draft.content.length} ${tr('characters')}`;$('autosave-state').textContent=tr('saveAvailable');
  $('answer-files').value='';$('prev-question').disabled=currentIndex===0;$('next-question').disabled=currentIndex===activeQuestions.length-1;
- const nav=$('question-nav');blank(nav);for(const [i,item] of activeQuestions.entries())nav.append(action(`문항 ${i+1}${activeAnswers[item.id]?.content?' ✓':''}`,()=>switchQuestion(i),'question-button'+(currentIndex===i?' active':'')));
+ const nav=$('question-nav');blank(nav);for(const [i,item] of activeQuestions.entries())nav.append(action(`${tr('question')} ${i+1}${activeAnswers[item.id]?.content?' ✓':''}`,()=>switchQuestion(i),'question-button'+(currentIndex===i?' active':'')));
  await appendAttachmentViews($('question-attachments'),'exam-materials',q.attachments||[]);
  await appendAttachmentViews($('answer-attachments'),'answer-files',draft.attachments||[],true);
 }
-async function uploadAnswerFiles(ev){if(!active)return;const q=activeQuestions[currentIndex],draft=draftFor(q);const files=[...ev.target.files];if(files.length+draft.attachments.length>10){notice('한 문항에 파일은 최대 10개까지 첨부할 수 있습니다.',true);return;}
- $('autosave-state').textContent='첨부파일 업로드 중';$('answer-files').disabled=true;
- try{for(const f of files){if(f.size>FILE_LIMIT)throw Error(`${f.name}: 10MB를 초과했습니다.`);
- const path=`${active.id}/${profile.id}/${uuid()}-${slug(f.name)}`;
+async function uploadAnswerFiles(ev){if(!active)return;const q=activeQuestions[currentIndex],draft=draftFor(q);const files=[...ev.target.files];if(files.length+draft.attachments.length>10){notice(tr('maxFiles'),true);return;}
+ $('autosave-state').textContent=tr('uploading');$('answer-files').disabled=true;
+ try{for(const f of files){if(f.size>FILE_LIMIT)throw Error(`${f.name}: ${tr('overSize')}`);
+
+const extension = f.name.includes('.')
+  ? f.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '')
+  : '';
+
+const path = `${active.id}/${profile.id}/${uuid()}${extension ? '.' + extension : ''}`;
+
  check(await api.storage.from('answer-files').upload(path,f,{contentType:f.type||'application/octet-stream'}));
  draft.attachments.push({path,name:f.name,type:f.type,size:f.size});changedSeq++;
  }
  await saveDraft();await appendAttachmentViews($('answer-attachments'),'answer-files',draft.attachments,true);
- }catch(err){notice('첨부파일 업로드/저장 실패: '+errorMessage(err),true);}finally{$('answer-files').disabled=false;$('answer-files').value='';}
+ }catch(err){notice(tr('uploadFail')+': '+errorMessage(err),true);}finally{$('answer-files').disabled=false;$('answer-files').value='';}
 }
 async function appendAttachmentViews(host,bucket,files,allowRemove=false){blank(host);
  for(const f of files){const d=newEl('div','attachment-item'),name=newEl('strong','',f.name);d.append(name);
  try{const {data,error}=await api.storage.from(bucket).createSignedUrl(f.path,120);if(error)throw error;
- const url=data.signedUrl,dlink=newEl('a','','파일 보기 / 다운로드');dlink.href=url;dlink.target='_blank';dlink.rel='noopener noreferrer';d.append(dlink);
+ const url=data.signedUrl,dlink=newEl('a','',tr('attachmentLink'));dlink.dataset.i18n='attachmentLink';dlink.href=url;dlink.target='_blank';dlink.rel='noopener noreferrer';d.append(dlink);
  if(/^image\//.test(f.type||'')){const img=newEl('img');img.src=url;img.alt=f.name;d.append(img);}
  else if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)){const iframe=newEl('iframe');iframe.src=url;iframe.title=f.name;d.append(iframe);}
  else if(/^text\//.test(f.type||'')||/\.(txt|csv|json|md)$/i.test(f.name)){
@@ -258,10 +438,10 @@ async function appendAttachmentViews(host,bucket,files,allowRemove=false){blank(
   const text=await fetch(url).then(r=>r.ok?r.text():Promise.reject(Error('미리보기 불가')));
   d.append(newEl('pre','',text.slice(0,20000)));
  }
- }catch(err){d.append(newEl('p','file-hint',`미리보기 불가: ${errorMessage(err)}`));}
- if(allowRemove)d.append(action('첨부 목록에서 제거',async()=>{if(!active)return;
+ }catch(err){d.append(newEl('p','file-hint',`${tr('previewFail')}: ${errorMessage(err)}`));}
+ if(allowRemove){const removeButton=action(tr('removeFile'),async()=>{if(!active)return;
   const arr=draftFor(activeQuestions[currentIndex]).attachments;const idx=arr.findIndex(x=>x.path===f.path);if(idx>=0)arr.splice(idx,1);changedSeq++;await saveDraft();await renderQuestion();
- },'button button-danger button-small'));
+ },'button button-danger button-small');removeButton.dataset.i18n='removeFile';d.append(removeButton);}
  host.append(d);
  }
 }
@@ -270,11 +450,11 @@ function tick(){if(!active)return;const diff=Date.parse(active.deadline_at)-now(
  const s=Math.ceil(diff/1000);$('countdown').textContent=`${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor(s%3600/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
 }
 async function finishExam(reason='submitted',skipConfirm=false){if(!active)return;
- if(!skipConfirm&&!confirm('최종 제출하면 답안을 다시 확인하거나 수정할 수 없습니다. 제출하시겠습니까?'))return;
+ if(!skipConfirm&&!confirm(tr('submitConfirm')))return;
  clearTimeout(saveTimer);await saving;
  const q=activeQuestions[currentIndex],a=draftFor(q);
  const result=check(await api.rpc('finish_exam',{p_assignment:active.id,p_question:q.id,p_content:a.content,p_attachments:a.attachments,p_reason:reason}));
- if(!closedStatuses.includes(result.status))throw Error('시험 종료에 실패했습니다.');
+ if(!closedStatuses.includes(result.status))throw Error(tr('finishFail'));
  clearInterval(tickTimer);active=null;activeQuestions=[];activeAnswers={};view('finished');
 }
 async function onClosed(){clearInterval(tickTimer);clearTimeout(saveTimer);active=null;activeQuestions=[];activeAnswers={};view('finished');}
