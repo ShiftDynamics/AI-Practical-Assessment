@@ -4,8 +4,8 @@
  */
 (() => {
 'use strict';
-const PROJECT_URL = 'https://fcaqzxrklnmvsewdnvzk.supabase.co';
-const PUBLISHABLE_KEY = 'sb_publishable_oPhrp0skftb6RrIirsbZYg_48gOU2Rm';
+const PROJECT_URL = 'https://htqoiegerivtlgmewwwt.supabase.co';
+const PUBLISHABLE_KEY = 'sb_publishable_6235lirtp6IvcMogMPvGSA_z5EAO_Hb';
 const FILE_LIMIT = 10 * 1024 * 1024;
 const I18N_STORAGE_KEY = 'sd_assessment_language';
 const I18N = {
