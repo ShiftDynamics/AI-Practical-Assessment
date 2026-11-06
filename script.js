@@ -12,8 +12,8 @@ const I18N = {
  ko: {
   heroTitle:'AI 활용 역량 검사',step1:'01 · 로그인',step2:'02 · 실무 과제 수행',step3:'03 · 결과물 제출',
   loginTitle:'시험 로그인',loginHelp:'담당자로부터 발급받은 아이디와 비밀번호로 로그인하세요.',
-  loginIdLabel:'아이디 또는 관리자 이메일',passwordLabel:'비밀번호',signIn:'로그인 →',signOut:'로그아웃',
-  loginPlaceholder:'SD-2026-001',passwordPlaceholder:'비밀번호',
+  loginIdLabel:'아이디',passwordLabel:'비밀번호',signIn:'로그인 →',signOut:'로그아웃',
+  loginPlaceholder:'아이디',passwordPlaceholder:'비밀번호',
   assignedTitle:'배정된 시험',securityTitle:'시험 문제 보안 안내',
   securityBody:'시험 문제와 첨부자료를 외부에 유출하거나 복사·촬영·배포·공유하는 행위를 금지합니다.',
   supportPrefix:'오류 및 문의사항이 발생할 경우,',supportSuffix:'로 남겨주세요.',
@@ -23,7 +23,7 @@ const I18N = {
   answerPlaceholder:'문제 해결 과정, AI 사용 방법, 결과 검증 및 최종 결론',fileLabel:'결과물 첨부',
   savePending:'자동저장 대기',previous:'← 이전',saveDraft:'임시저장',next:'다음 →',submit:'시험 최종 제출 →',
   finishedTitle:'시험이 종료되었습니다.\n좋은 결과 있으시길 바랍니다.',
-  finishedHelp:'제출된 시험 문제와 답안은 다시 열람할 수 없습니다.',
+  finishedHelp:'제출된 시험 문제와 답안은 다시 열람할 수 없습니다.',finishedList:'시험 목록 보기',
   candidateRole:'후보자',welcome:'{name}님, 배정된 시험을 확인하세요.',noAssigned:'배정된 시험이 없습니다.',
   period:'응시 기간',duration:'제한시간',startExam:'시험 시작',question:'문항',characters:'자',
   statusActive:'진행 중',statusSubmitted:'제출 완료',statusTimedOut:'시간 만료',statusTerminated:'응시 이탈 종료',
@@ -44,8 +44,8 @@ const I18N = {
  en: {
   heroTitle:'AI Competency Assessment',step1:'01 · Sign in',step2:'02 · Complete the task',step3:'03 · Submit your work',
   loginTitle:'Assessment Sign-in',loginHelp:'Sign in with the user ID and password provided by the recruitment team.',
-  loginIdLabel:'User ID or administrator email',passwordLabel:'Password',signIn:'Sign in →',signOut:'Sign out',
-  loginPlaceholder:'SD-2026-001',passwordPlaceholder:'Password',
+  loginIdLabel:'User ID',passwordLabel:'Password',signIn:'Sign in →',signOut:'Sign out',
+  loginPlaceholder:'User ID',passwordPlaceholder:'Password',
   assignedTitle:'Assigned Assessments',securityTitle:'Assessment Confidentiality',
   securityBody:'Copying, photographing, distributing, sharing, or disclosing assessment questions and reference materials externally is prohibited.',
   supportPrefix:'For technical issues or inquiries, contact',supportSuffix:'.',
@@ -55,7 +55,7 @@ const I18N = {
   answerPlaceholder:'Describe your approach, how you used AI, how you verified the results, and your final conclusion.',fileLabel:'Attach deliverables',
   savePending:'Waiting to save',previous:'← Previous',saveDraft:'Save draft',next:'Next →',submit:'Submit assessment →',
   finishedTitle:'Your assessment has ended.\nWe wish you the best.',
-  finishedHelp:'The submitted questions and answers are no longer available for review.',
+  finishedHelp:'The submitted questions and answers are no longer available for review.',finishedList:'View assessments',
   candidateRole:'Candidate',welcome:'{name}, please review your assigned assessments.',noAssigned:'No assessments have been assigned.',
   period:'Available',duration:'Time limit',startExam:'Start assessment',question:'Question',characters:'characters',
   statusActive:'In progress',statusSubmitted:'Submitted',statusTimedOut:'Time expired',statusTerminated:'Ended due to interruption',
@@ -133,6 +133,12 @@ let api, profile=null, session=null, all={profiles:[],templates:[],questions:[],
 let currentTab='candidates', active=null, activeQuestions=[], activeAnswers={}, currentIndex=0;
 let saveTimer=null,tickTimer=null,epoch=0, saving=Promise.resolve(), changedSeq=0, savedSeq=0;
 let timerExpired=false;
+let showClosedList=false;
+const finishMarkerKey = () => profile?.id ? `sd_assessment_finished_${profile.id}` : null;
+function pinFinishedScreen(){ const key=finishMarkerKey(); if(key){try{sessionStorage.setItem(key,'1');}catch{}} showClosedList=false; }
+function hasPinnedFinishedScreen(){ const key=finishMarkerKey();if(!key)return false;try{return sessionStorage.getItem(key)==='1';}catch{return false;} }
+function clearFinishedScreenPin(){ const key=finishMarkerKey();if(key){try{sessionStorage.removeItem(key);}catch{}} }
+
 let editingTemplate=null;
 let pdfObjectUrls=new WeakMap();
 const closedStatuses = ['submitted','timed_out','terminated'];
@@ -164,6 +170,7 @@ function bindEvents(){
  document.querySelectorAll('.language-choice').forEach(b=>b.addEventListener('click',()=>selectLanguage(b.dataset.lang)));
  $('login-form').addEventListener('submit',login);
  $('logout-btn').addEventListener('click',logout);$('finished-logout').addEventListener('click',logout);
+ $('finished-exams').addEventListener('click',async()=>{ if(active)return; clearFinishedScreenPin();showClosedList=true; try{await refreshCandidate();}catch(err){notice(errorMessage(err),true);} });
  document.querySelectorAll('.admin-tab').forEach(b=>b.addEventListener('click',()=>selectTab(b.dataset.tab)));
  document.querySelectorAll('[data-refresh]').forEach(b=>b.addEventListener('click',async()=>{await refreshAdmin();notice('현재 데이터를 불러왔습니다.')}));
  $('candidate-form').addEventListener('submit',createCandidate);
@@ -201,7 +208,7 @@ async function logout(){
  if(active){if(!confirm(tr('signOutConfirm')))return;
   try{await finishExam('logout',true);}catch(err){notice(tr('logoutFail')+' '+errorMessage(err),true);return;}
  }
- await api.auth.signOut();profile=null;session=null;active=null;clearInterval(tickTimer);clearTimeout(saveTimer);view('login');
+ await api.auth.signOut();clearFinishedScreenPin();showClosedList=false;profile=null;session=null;active=null;clearInterval(tickTimer);clearTimeout(saveTimer);view('login');
 }
 function selectTab(name){currentTab=name;document.querySelectorAll('.admin-tab').forEach(e=>e.classList.toggle('active',e.dataset.tab===name));
  ['candidates','templates','assignments','progress','submissions'].forEach(k=>$('admin-'+k).hidden=k!==name);
@@ -466,7 +473,7 @@ async function refreshCandidate(){
  $('candidate-welcome').textContent=tr('welcome',{name:profile.display_name});renderCandidateList();
  const hasPending=all.assignments.some(a=>!getAttempt(a.id)&&now()>=new Date(a.available_from).getTime()&&now()<new Date(a.available_until).getTime());
  const allClosed=all.assignments.length>0 && all.assignments.every(a=>!!getAttempt(a.id)&&getAttempt(a.id).status!=='active');
- if(allClosed) view('finished');else view('candidate');
+ if(hasPinnedFinishedScreen() || (allClosed && !showClosedList)) view('finished');else view('candidate');
 }
 function renderCandidateList(){const list=$('candidate-exams');blank(list);
  if(!all.assignments.length){list.append(newEl('div','card empty',tr('noAssigned')));return;}
@@ -563,9 +570,9 @@ async function finishExam(reason='submitted',skipConfirm=false){if(!active)retur
  const q=activeQuestions[currentIndex],a=draftFor(q);
  const result=check(await api.rpc('finish_exam',{p_assignment:active.id,p_question:q.id,p_content:a.content,p_attachments:a.attachments,p_reason:reason}));
  if(!closedStatuses.includes(result.status))throw Error(tr('finishFail'));
- clearInterval(tickTimer);active=null;activeQuestions=[];activeAnswers={};view('finished');
+ clearInterval(tickTimer);active=null;activeQuestions=[];activeAnswers={};pinFinishedScreen();view('finished');
 }
-async function onClosed(){clearInterval(tickTimer);clearTimeout(saveTimer);active=null;activeQuestions=[];activeAnswers={};view('finished');}
+async function onClosed(){clearInterval(tickTimer);clearTimeout(saveTimer);active=null;activeQuestions=[];activeAnswers={};pinFinishedScreen();view('finished');}
 
 // Browser-only Korean PDF generator, no extra dependency. Text is rasterized (not searchable).
 function blobDownload(name,blob){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),15000);}

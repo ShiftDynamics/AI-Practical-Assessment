@@ -42,3 +42,10 @@
 .pdf-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .pdf-actions a{font-weight:700}
 @media(max-width:650px){.pdf-preview{min-height:360px;height:58vh}}
+
+/* V16: keep the completion screen clearly visible until the candidate chooses an action. */
+#finished-view{min-height:calc(100vh - 230px);align-items:center;}
+#finished-view .end-card{max-width:600px;}
+.finished-actions{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:12px;margin-top:26px;}
+.finished-actions .button{min-width:140px;}
+@media(max-width:650px){.finished-actions{flex-direction:column}.finished-actions .button{width:100%;}}
