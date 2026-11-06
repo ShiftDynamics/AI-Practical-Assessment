@@ -4,8 +4,8 @@
  */
 (() => {
 'use strict';
-const PROJECT_URL = 'https://YOUR_PROJECT_REF.supabase.co';
-const PUBLISHABLE_KEY = 'YOUR_SUPABASE_PUBLISHABLE_KEY';
+const PROJECT_URL = 'https://htqoiegerivtlgmewwwt.supabase.co';
+const PUBLISHABLE_KEY = 'sb_publishable_6235lirtp6IvcMogMPvGSA_z5EAO_Hb';
 const FILE_LIMIT = 10 * 1024 * 1024;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
