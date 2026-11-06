@@ -4,13 +4,13 @@
  */
 (() => {
 'use strict';
-const PROJECT_URL = 'https://htqoiegerivtlgmewwwt.supabase.co';
-const PUBLISHABLE_KEY = 'sb_publishable_6235lirtp6IvcMogMPvGSA_z5EAO_Hb';
+const PROJECT_URL = 'https://fcaqzxrklnmvsewdnvzk.supabase.co';
+const PUBLISHABLE_KEY = 'sb_publishable_oPhrp0skftb6RrIirsbZYg_48gOU2Rm';
 const FILE_LIMIT = 10 * 1024 * 1024;
 const I18N_STORAGE_KEY = 'sd_assessment_language';
 const I18N = {
  ko: {
-  heroTitle:'AI 활용 역량 검사',step1:'01 · 로그인',step2:'02 · 실무 과제 수행',step3:'03 · 결과물 제출',
+  footerData:'시험 데이터는 Supabase 서버에 저장됩니다.',heroTitle:'AI 활용 역량 검사',step1:'01 · 로그인',step2:'02 · 실무 과제 수행',step3:'03 · 결과물 제출',
   loginTitle:'시험 로그인',loginHelp:'담당자로부터 발급받은 아이디와 비밀번호로 로그인하세요.',
   loginIdLabel:'아이디 또는 관리자 이메일',passwordLabel:'비밀번호',signIn:'로그인 →',signOut:'로그아웃',
   loginPlaceholder:'SD-2026-001',passwordPlaceholder:'비밀번호',
@@ -43,7 +43,7 @@ const I18N = {
   submitConfirm:'최종 제출하면 답안을 다시 확인하거나 수정할 수 없습니다. 제출하시겠습니까?',finishFail:'시험 종료에 실패했습니다.',
  },
  en: {
-  heroTitle:'AI Competency Assessment',step1:'01 · Sign in',step2:'02 · Complete the task',step3:'03 · Submit your work',
+  footerData:'Assessment data is stored securely in Supabase.',heroTitle:'AI Competency Assessment',step1:'01 · Sign in',step2:'02 · Complete the task',step3:'03 · Submit your work',
   loginTitle:'Assessment Sign-in',loginHelp:'Sign in with the user ID and password provided by the recruitment team.',
   loginIdLabel:'User ID or administrator email',passwordLabel:'Password',signIn:'Sign in →',signOut:'Sign out',
   loginPlaceholder:'SD-2026-001',passwordPlaceholder:'Password',
