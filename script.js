@@ -6,7 +6,7 @@
 'use strict';
 const PROJECT_URL = 'https://htqoiegerivtlgmewwwt.supabase.co';
 const PUBLISHABLE_KEY = 'sb_publishable_6235lirtp6IvcMogMPvGSA_z5EAO_Hb';
-const FILE_LIMIT = 10 * 1024 * 1024;
+const FILE_LIMIT = 50 * 1024 * 1024;
 const I18N_STORAGE_KEY = 'sd_assessment_language';
 const I18N = {
  ko: {
@@ -37,7 +37,7 @@ const I18N = {
   savedNotice:'현재 문항을 서버에 저장했습니다.',saveClosed:'시험이 이미 종료되어 답안을 저장할 수 없습니다.',
   switchError:'답안을 저장하지 못해 문항을 이동하지 않았습니다.',
   maxFiles:'한 문항에 파일은 최대 10개까지 첨부할 수 있습니다.',uploading:'첨부파일 업로드 중',
-  overSize:'10MB를 초과했습니다.',uploadFail:'첨부파일 업로드/저장 실패',
+  candidateUploadLimit:'파일당 최대 50MB',overSize:'50MB를 초과했습니다.',uploadFail:'첨부파일 업로드/저장 실패',
   attachmentLink:'파일 보기 / 다운로드',previewFail:'미리보기 불가',removeFile:'첨부 목록에서 제거',
   submitConfirm:'최종 제출하면 답안을 다시 확인하거나 수정할 수 없습니다. 제출하시겠습니까?',finishFail:'시험 종료에 실패했습니다.',
  },
@@ -69,7 +69,7 @@ const I18N = {
   savedNotice:'This answer has been saved to the server.',saveClosed:'The assessment has ended. Your answer can no longer be saved.',
   switchError:'Unable to move to the next question because your answer could not be saved.',
   maxFiles:'You can attach up to 10 files per question.',uploading:'Uploading attachments',
-  overSize:'exceeds 10 MB.',uploadFail:'File upload or save failed',
+  candidateUploadLimit:'Maximum 50 MB per file',overSize:'exceeds 50 MB.',uploadFail:'File upload or save failed',
   attachmentLink:'View / download file',previewFail:'Preview unavailable',removeFile:'Remove attachment',
   submitConfirm:'Once submitted, you cannot view or edit your answers. Submit now?',finishFail:'Could not finalize the assessment.',
  }
@@ -232,7 +232,7 @@ async function deleteCandidate(p){if(!confirm(`${p.display_name} 후보자와 �
  if(prompt('삭제할 후보자의 아이디를 정확히 입력하세요.')!==p.username)return;
  await edge('delete',{id:p.id});await refreshAdmin();notice('후보자를 삭제했습니다. 저장소에 남은 첨부파일은 별도 정리할 수 있습니다.');
 }
-function addQuestionEditor(text=''){const box=newEl('div','question-editor');box.innerHTML='<label>실무 문제 설명</label><textarea class="question-text" required placeholder="예: AI를 활용하여 고객 제안서의 핵심 요구사항을 정리하고, 가정·검증 절차·결과물을 제출하세요."></textarea><label>문제 참고자료 (이미지, PDF, 텍스트 등)</label><input class="question-files" type="file" multiple accept="image/*,.pdf,.txt,.csv,.json,.md,.docx,.xlsx,.pptx"><p class="file-hint">파일당 최대 10MB · 브라우저에서 지원하는 형식은 화면에서 미리보기 제공</p>';
+function addQuestionEditor(text=''){const box=newEl('div','question-editor');box.innerHTML='<label>실무 문제 설명</label><textarea class="question-text" required placeholder="예: AI를 활용하여 고객 제안서의 핵심 요구사항을 정리하고, 가정·검증 절차·결과물을 제출하세요."></textarea><label>문제 참고자료 (이미지, PDF, 텍스트 등)</label><input class="question-files" type="file" multiple accept="image/*,.pdf,.txt,.csv,.json,.md,.docx,.xlsx,.pptx"><p class="file-hint">파일당 최대 50MB · 브라우저에서 지원하는 형식은 화면에서 미리보기 제공</p>';
  box.querySelector('textarea').value=text;
  box.append(action('문항 제거',()=>{if(document.querySelectorAll('.question-editor').length>1)box.remove();else notice('최소 1개 문항이 필요합니다.',true);},'button button-danger button-small'));
  $('question-editors').append(box);
@@ -244,7 +244,7 @@ async function createTemplate(ev){ev.preventDefault();ensureAdmin();const form=e
  for(let i=0;i<editors.length;i++){
   const body=editors[i].querySelector('textarea').value.trim();if(!body)throw Error(`${i+1}번 문제 내용이 없습니다.`);
   const question=check(await api.from('questions').insert({template_id:templateId,sort_order:i+1,body}).select().single());
-  const att=[];for(const file of editors[i].querySelector('input[type=file]').files){if(file.size>FILE_LIMIT)throw Error(`${file.name}: 10MB 초과`);
+  const att=[];for(const file of editors[i].querySelector('input[type=file]').files){if(file.size>FILE_LIMIT)throw Error(`${file.name}: 50MB 초과`);
 
 const extension = file.name.includes('.')
   ? file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '')
