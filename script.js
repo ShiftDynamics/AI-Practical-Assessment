@@ -646,7 +646,7 @@ async function deleteAssignment(a){if(!confirm(`해당 시험 배정과 답안�
 function renderSubmissions(){const tbody=$('submission-rows');blank(tbody);
  for(const a of all.assignments){const t=getAttempt(a.id);if(!t||!closedStatuses.includes(t.status))continue;
  const p=getCandidate(a.candidate_id),tr=document.createElement('tr');for(const val of [`${p?.display_name||''} (${p?.username||''})`,a.exam_title,`${labelStatus(a,t)} · ${fmt(t.finished_at)}`])tr.append(newEl('td','',val));
- const td=newEl('td');td.append(action('답안 보기',()=>showSubmission(a)),action('구분형 PDF 다운로드',()=>exportPDF(a)));tr.append(td);tbody.append(tr);
+ const td=newEl('td');td.append(action('답안 보기',()=>showSubmission(a)),action('PDF 다운로드',()=>exportPDF(a)));tr.append(td);tbody.append(tr);
  }if(!tbody.children.length)tbody.append(emptyRow(4,'제출된 답안이 없습니다.'));
 }
 async function showSubmission(a){const box=$('answer-detail');blank(box);box.hidden=false;const p=getCandidate(a.candidate_id);
@@ -824,12 +824,12 @@ async function exportPDF(a){
    writeRow(line);
   }
  }
- function sectionHeading(label,index,kind){
+ function sectionHeading(label,kind){
   room(94);
   const bg=kind==='question'?COLOR.surface:COLOR.navy;
   ctx.fillStyle=bg;ctx.fillRect(M,y,RIGHT-M,62);
   ctx.fillStyle=kind==='question'?COLOR.accent:COLOR.white;
-  setFont(24,700);ctx.fillText(`${index}.  ${label}`,M+24,y+16);
+  setFont(24,700);ctx.fillText(label,M+24,y+16);
   y+=79;
  }
  function meta(label,value){
@@ -871,12 +871,12 @@ async function exportPDF(a){
   for(const [i,q] of qs.entries()){
    room(190);rule();room(65);
    setFont(26,700);ctx.fillStyle=COLOR.navy;ctx.fillText(`QUESTION ${String(i+1).padStart(2,'0')}`,M+6,y);y+=57;
-   sectionHeading('문제',i+1,'question');
+   sectionHeading('문제','question');
    // Markdown emphasis markers are formatting syntax, not part of the plain-text PDF.
    // The problem body and the candidate answer are ALWAYS drawn at normal font weight.
    textLines(String(q.body||'').replace(/\*\*/g,''),{size:23,lineHeight:36,rowFill:COLOR.surface,bar:COLOR.accent});
    y+=32;
-   room(100);sectionHeading('후보자 답안',i+1,'answer');
+   room(100);sectionHeading('후보자 답안','answer');
    const ans=answerByQuestion.get(q.id);
    textLines(ans?.content||'(작성된 답안 없음)',{size:23,lineHeight:38});
    await attachments(ans?.attachments||[]);
@@ -884,7 +884,7 @@ async function exportPDF(a){
   }
   finishPage();
   blobDownload(`SD_답안_${slug(p?.username||a.candidate_id)}_${slug(a.exam_title)}.pdf`,makePdf(pg));
-  notice('문제와 후보자 답안을 구분한 PDF 다운로드를 시작했습니다. Word·Excel 등 비이미지 첨부파일은 파일명만 포함됩니다. 원본은 답안 보기에서 확인하세요.');
+  notice('PDF 다운로드를 시작했습니다. Word·Excel 등 비이미지 첨부파일은 파일명만 포함됩니다. 원본은 답안 보기에서 확인하세요.');
  }catch(err){notice('PDF 생성 실패: '+errorMessage(err),true);}
 }
 

@@ -92,5 +92,3 @@
 @media(max-width:650px){.bank-action-toast{top:76px;right:16px}}
 
 /* V22: PDF export help text in admin submissions */
-.pdf-export-note{font-size:12px;line-height:1.7;color:var(--muted);margin:0 0 16px;padding:11px 14px;background:var(--soft);border:1px solid var(--line);border-radius:9px}
-.pdf-export-note strong{color:var(--ink)}
