@@ -16,7 +16,7 @@ const I18N = {
   loginPlaceholder:'아이디',passwordPlaceholder:'비밀번호',
   assignedTitle:'배정된 시험',securityTitle:'시험 문제 보안 안내',
   securityBody:'시험 문제와 첨부자료를 외부에 유출하거나 복사·촬영·배포·공유하는 행위를 금지합니다.',
-  supportPrefix:'오류 및 문의사항이 발생할 경우,',supportSuffix:'로 남겨주세요.',
+  supportPrefix:'오류 또는 문의사항이 있으신 경우,',supportSuffix:'로 남겨주세요.',
   leaveWarning:'시험 진행 중 새로고침·로그아웃·페이지 이탈 시 재접속할 수 없습니다.',
   timeRemaining:'남은 시간',examHelp:'AI 도구를 활용하여 실무 문제를 해결하고, 과정과 결과물을 제출하세요.',
   questionList:'문항 목록',answerLabel:'답안 작성',
