@@ -147,6 +147,33 @@ let bankDetailRequest=0;
 let pdfObjectUrls=new WeakMap();
 const closedStatuses = ['submitted','timed_out','terminated'];
 function notice(msg, bad=false){ const e=$('notice');e.textContent=msg;e.className='notice'+(bad?' error':'');e.hidden=false;window.scrollTo({top:0,behavior:'smooth'}); }
+// Lightweight, non-scrolling confirmation for adding a question from the bank.
+let bankToastTimer=null;
+function bankToast(message){
+ const toast=$('bank-action-toast');
+ clearTimeout(bankToastTimer);
+ toast.textContent=message;
+ toast.hidden=false;
+ bankToastTimer=setTimeout(()=>{toast.hidden=true;},3200);
+}
+// Numbering reflects the actual DOM order, which is also the saved sort_order.
+function updateQuestionNumbers(){
+ const editors=[...$('question-editors').querySelectorAll(':scope > .question-editor')];
+ editors.forEach((box,index)=>{
+  const n=index+1;
+  const heading=box.querySelector('.question-editor-heading');
+  if(heading)heading.textContent=`문항 ${n}`;
+  const description=box.querySelector('.question-editor-source');
+  if(description)description.textContent=box._bankSourceTitle?`문제은행: ${box._bankSourceTitle}`:'직접 작성 문항';
+  box.dataset.questionNumber=String(n);
+  box.setAttribute('aria-label',`문항 ${n}`);
+  const textarea=box.querySelector('.question-text');
+  if(textarea)textarea.setAttribute('aria-label',`문항 ${n} 문제 설명`);
+ });
+ const counter=$('template-question-count');
+ if(counter)counter.textContent=`총 ${editors.length}개 문항`;
+}
+
 function clearNotice(){ $('notice').hidden=true; }
 function view(name){['setup','login','admin','candidate','exam','finished'].forEach(k=>$(k+'-view').hidden=k!==name); $('header-actions').hidden=['setup','login'].includes(name);applyLanguage();clearNotice();window.scrollTo(0,0);}
 function check({data,error}) {if(error) throw error;return data;}
@@ -405,7 +432,7 @@ function addBankToTemplate(b){
  // Replace only a pristine blank editor; never overwrite a draft the admin wrote.
  if(editors.length===1&&!editors[0]._questionId&&!editors[0]._bankSourceId&&!editors[0].querySelector('.question-text').value.trim()&&!editors[0].querySelector('.question-files').files.length)editors[0].remove();
  const box=addQuestionEditor(b.body,null,b);renderBankPicker();
- box.scrollIntoView({behavior:'smooth',block:'nearest'});
+ bankToast(`문항 ${box.dataset.questionNumber}: 템플릿에 추가되었습니다.`);
 }
 async function cloneBankFiles(templateId,questionId,files){
  const cloned=[];
@@ -420,6 +447,10 @@ async function cloneBankFiles(templateId,questionId,files){
 }
 function addQuestionEditor(text='',q=null,bank=null){
  const box=newEl('div','question-editor');box._questionId=q?.id||null;
+ box._bankSourceTitle=bank?.title||null;
+ const heading=newEl('div','question-editor-header');
+ heading.append(newEl('strong','question-editor-heading','문항'),newEl('span','question-editor-source',''));
+ box.append(heading);
  box._attachments=Array.isArray(q?.attachments)?[...q.attachments]:Array.isArray(bank?.attachments)?[...bank.attachments]:[];
  box._bankSourceId=bank?.id||null;
  box._removedPaths=[];
@@ -438,14 +469,14 @@ function addQuestionEditor(text='',q=null,bank=null){
  const fileInput=newEl('input','question-files');fileInput.type='file';fileInput.multiple=true;fileInput.accept='image/*,.pdf,.txt,.csv,.json,.md,.docx,.xlsx,.pptx';
  box.append(title,textarea,toolbar,previewTitle,preview,filesLabel,stored,fileInput,newEl('p','file-hint','파일당 최대 50MB · 기존 첨부파일 유지 또는 제거 가능'));
  const orderControls=newEl('div','question-order-controls');
- orderControls.append(action('↑ 위로',()=>{const prior=box.previousElementSibling;if(prior?.classList.contains('question-editor'))$('question-editors').insertBefore(box,prior);},'button button-outline button-small'));
- orderControls.append(action('↓ 아래로',()=>{const next=box.nextElementSibling;if(next?.classList.contains('question-editor'))$('question-editors').insertBefore(next,box);},'button button-outline button-small'));
+ orderControls.append(action('↑ 위로',()=>{const prior=box.previousElementSibling;if(prior?.classList.contains('question-editor')){$('question-editors').insertBefore(box,prior);updateQuestionNumbers();}},'button button-outline button-small'));
+ orderControls.append(action('↓ 아래로',()=>{const next=box.nextElementSibling;if(next?.classList.contains('question-editor')){$('question-editors').insertBefore(next,box);updateQuestionNumbers();}},'button button-outline button-small'));
  box.append(orderControls);
  box.append(action('문항 제거',()=>{
-  if(document.querySelectorAll('.question-editor').length>1)box.remove();
+  if(document.querySelectorAll('.question-editor').length>1){box.remove();updateQuestionNumbers();renderBankPicker();}
   else notice('최소 1개 문항이 필요합니다.',true);
  },'button button-danger button-small'));
- $('question-editors').append(box);refreshPreview();renderStoredFiles(box);
+ $('question-editors').append(box);refreshPreview();renderStoredFiles(box);updateQuestionNumbers();
  return box;
 }
 function resetTemplateEditor(){

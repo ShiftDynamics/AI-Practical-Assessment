@@ -81,3 +81,12 @@
 .question-preview{white-space:pre-wrap;overflow-wrap:anywhere;font-weight:400;line-height:1.8;min-height:46px;padding:13px 14px;background:#fff;border:1px solid var(--line);border-radius:9px}
 .question-preview strong,.template-question-body strong,#exam-view #question-title strong{font-weight:750}
 .question-toolbar .button{flex-shrink:0}
+
+
+/* V21: stable question numbering and non-scrolling confirmation */
+.template-question-count{display:inline-flex;align-items:center;border:1px solid #ddd;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:750;margin:9px 0 0;color:#333;background:#fff}
+.question-editor-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #ddd}
+.question-editor-heading{font-size:16px;font-weight:800;letter-spacing:-.015em}
+.question-editor-source{font-size:11px;color:#666;overflow-wrap:anywhere}
+.bank-action-toast{position:fixed;top:94px;right:24px;z-index:9999;max-width:min(390px,calc(100vw - 32px));padding:14px 18px;background:#202020;color:#fff;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);font-size:13px;font-weight:600;line-height:1.5;pointer-events:none}
+@media(max-width:650px){.bank-action-toast{top:76px;right:16px}}
