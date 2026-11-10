@@ -129,7 +129,7 @@ const now = () => Date.now();
 const uuid = () => crypto.randomUUID();
 const slug = s => String(s).replace(/[^a-zA-Z0-9가-힣_.-]/g,'_').slice(0,65);
 const errorMessage = err => err?.message || String(err || '알 수 없는 오류');
-let api, profile=null, session=null, all={profiles:[],templates:[],questions:[],assignments:[],attempts:[],answers:[]};
+let api, profile=null, session=null, all={profiles:[],templates:[],questions:[],assignments:[],attempts:[],answers:[],bank:[]};
 let currentTab='candidates', active=null, activeQuestions=[], activeAnswers={}, currentIndex=0;
 let saveTimer=null,tickTimer=null,epoch=0, saving=Promise.resolve(), changedSeq=0, savedSeq=0;
 let timerExpired=false;
@@ -140,6 +140,10 @@ function hasPinnedFinishedScreen(){ const key=finishMarkerKey();if(!key)return f
 function clearFinishedScreenPin(){ const key=finishMarkerKey();if(key){try{sessionStorage.removeItem(key);}catch{}} }
 
 let editingTemplate=null;
+let editingBank=null;
+let bankSavedAttachments=[];
+let bankReady=true;
+let bankDetailRequest=0;
 let pdfObjectUrls=new WeakMap();
 const closedStatuses = ['submitted','timed_out','terminated'];
 function notice(msg, bad=false){ const e=$('notice');e.textContent=msg;e.className='notice'+(bad?' error':'');e.hidden=false;window.scrollTo({top:0,behavior:'smooth'}); }
@@ -176,6 +180,14 @@ function bindEvents(){
  $('candidate-form').addEventListener('submit',createCandidate);
  $('template-form').addEventListener('submit',saveTemplate);
  $('template-cancel').addEventListener('click',resetTemplateEditor);
+ $('bank-form').addEventListener('submit',saveBankQuestion);
+ $('bank-cancel').addEventListener('click',resetBankForm);
+ $('bank-body').addEventListener('input',renderBankPreview);
+ $('bank-bold').addEventListener('click',()=>boldSelectedText($('bank-body')));
+ $('bank-search').addEventListener('input',renderBankList);
+ $('bank-picker-search').addEventListener('input',renderBankPicker);
+ $('open-bank-picker').addEventListener('click',()=>{if(!bankReady){notice('먼저 question_bank.sql을 실행하세요.',true);return;} $('bank-picker').hidden=false;renderBankPicker();$('bank-picker').scrollIntoView({behavior:'smooth',block:'nearest'});});
+ $('close-bank-picker').addEventListener('click',()=>{$('bank-picker').hidden=true;});
  $('add-question').addEventListener('click',()=>addQuestionEditor());
  $('assignment-form').addEventListener('submit',createAssignment);
  $('save-answer').addEventListener('click',()=>saveDraft(true));
@@ -228,6 +240,14 @@ async function refreshAdmin(){
  results.forEach(check);
  [all.profiles,all.templates,all.questions,all.assignments,all.attempts,all.answers]=results.map(r=>r.data||[]);
  all.profiles=all.profiles.filter(p=>p.role==='candidate');
+ // The original assessment remains usable if the question-bank migration was not run yet.
+ const br=await api.from('question_bank').select('*').order('created_at',{ascending:false});
+ bankReady=!br.error;
+ all.bank=br.error?[]:(br.data||[]);
+ $('bank-setup-warning').hidden=bankReady;
+ for(const el of $('bank-form').querySelectorAll('input,textarea,button'))el.disabled=!bankReady;
+ $('open-bank-picker').disabled=!bankReady;
+ renderBankList();renderBankPicker();
  renderCandidates();renderTemplates();renderSelectors();renderProgress();renderSubmissions();
 }
 async function createCandidate(ev){ev.preventDefault();const f=ev.currentTarget;setBusy(f,true);
@@ -264,11 +284,118 @@ function renderStoredFiles(box){
   area.append(row);
  }
 }
-function addQuestionEditor(text='',q=null){
+function boldSelectedText(textarea){
+ const from=textarea.selectionStart,to=textarea.selectionEnd;
+ if(from===to){notice('먼저 굵게 표시할 문장을 선택하세요.',true);textarea.focus();return;}
+ textarea.setRangeText(`**${textarea.value.slice(from,to)}**`,from,to,'select');
+ textarea.dispatchEvent(new Event('input',{bubbles:true}));textarea.focus();
+}
+function renderBankPreview(){const box=$('bank-preview');blank(box);box.append(formattedQuestion($('bank-body').value));}
+function renderBankStoredFiles(){
+ const host=$('bank-stored-files');blank(host);
+ if(!bankSavedAttachments.length){host.append(newEl('p','file-hint','등록된 참고자료가 없습니다.'));return;}
+ for(const f of bankSavedAttachments){
+  const row=newEl('div','stored-file');row.append(newEl('span','',f.name));
+  row.append(action('목록에서 제거',()=>{bankSavedAttachments=bankSavedAttachments.filter(x=>x.path!==f.path);renderBankStoredFiles();},'button button-danger button-small'));
+  host.append(row);
+ }
+}
+function resetBankForm(){
+ editingBank=null;bankSavedAttachments=[];$('bank-form').reset();
+ $('bank-form-heading').textContent='문제은행에 새 문제 등록';$('bank-save').textContent='문제은행에 저장';$('bank-cancel').hidden=true;
+ renderBankPreview();renderBankStoredFiles();
+}
+function editBankQuestion(b){
+ editingBank=b;bankSavedAttachments=Array.isArray(b.attachments)?[...b.attachments]:[];
+ $('bank-title').value=b.title;$('bank-category').value=b.category||'';$('bank-body').value=b.body;
+ $('bank-form-heading').textContent='문제은행 문제 수정';$('bank-save').textContent='문제 수정 저장';$('bank-cancel').hidden=false;
+ renderBankPreview();renderBankStoredFiles();$('bank-form-heading').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function saveBankQuestion(ev){
+ ev.preventDefault();ensureAdmin();if(!bankReady)throw Error('문제은행 SQL 설치가 필요합니다.');
+ const form=ev.currentTarget;setBusy(form,true);
+ try{
+  const data={title:$('bank-title').value.trim(),category:$('bank-category').value.trim(),body:$('bank-body').value.trim()};
+  if(!data.title||!data.body)throw Error('문제 이름과 본문을 입력하세요.');
+  let b=editingBank;
+  if(!b)b=check(await api.from('question_bank').insert({...data,attachments:[]}).select().single());
+  const stored=await uploadMaterialFiles('bank',b.id,[...$('bank-files').files]);
+  check(await api.from('question_bank').update({...data,attachments:[...bankSavedAttachments,...stored],updated_at:new Date().toISOString()}).eq('id',b.id));
+  resetBankForm();await refreshAdmin();notice('문제은행에 저장했습니다. 기존 템플릿에 복사된 문제는 변경되지 않습니다.');
+ }catch(err){notice('문제은행 저장 오류: '+errorMessage(err)+' 일부 파일이 저장되었을 수 있으므로 목록을 확인하세요.',true);}
+ finally{setBusy(form,false);}
+}
+async function deleteBankQuestion(b){
+ if(!confirm(`문제은행에서 "${b.title}" 문제를 삭제하시겠습니까? 이미 템플릿에 복사된 문제는 그대로 남습니다. 연결되지 않은 Storage 파일은 별도로 정리해야 합니다.`))return;
+ check(await api.from('question_bank').delete().eq('id',b.id));
+ if(editingBank?.id===b.id)resetBankForm();
+ await refreshAdmin();notice('문제은행에서 삭제했습니다. 기존 템플릿 및 해당 답안에는 영향을 주지 않습니다.');
+}
+function filteredBank(term){
+ const q=String(term||'').trim().toLocaleLowerCase();
+ return all.bank.filter(b=>!q||[b.title,b.category,b.body].some(s=>String(s||'').toLocaleLowerCase().includes(q)));
+}
+function renderBankList(){
+ const host=$('bank-list');blank(host);
+ if(!bankReady)return;
+ const items=filteredBank($('bank-search').value);
+ if(!items.length){host.append(newEl('p','empty',all.bank.length?'검색 결과가 없습니다.':'등록된 문제가 없습니다. 위에서 먼저 문제를 등록하세요.'));return;}
+ for(const b of items){
+  const row=newEl('div','manage-item'),info=newEl('div','manage-item-info'),actions=newEl('div','manage-actions');
+  const title=action(b.title,()=>showBankQuestion(b),'template-title-button');
+  const n=Array.isArray(b.attachments)?b.attachments.length:0;
+  info.append(title,newEl('small','',`${b.category||'미분류'} · 첨부 ${n}개 · ${b.body.length}자`));
+  actions.append(action('템플릿에 추가',()=>addBankToTemplate(b),'button button-outline button-small'),action('수정',()=>editBankQuestion(b),'button button-outline button-small'),action('삭제',()=>deleteBankQuestion(b),'button button-danger button-small'));
+  row.append(info,actions);host.append(row);
+ }
+}
+async function showBankQuestion(b){
+ const host=$('bank-detail'),request=++bankDetailRequest;blank(host);host.hidden=false;
+ host.append(newEl('h3','',b.title),newEl('p','muted small',b.category||'미분류'));
+ const text=newEl('p','template-question-body');text.append(formattedQuestion(b.body));host.append(text);
+ const attachments=newEl('div','attachments');host.append(attachments);
+ if((b.attachments||[]).length){await appendAttachmentViews(attachments,'exam-materials',b.attachments);if(request!==bankDetailRequest)return;}
+ else attachments.append(newEl('p','file-hint','첨부자료 없음'));
+}
+function renderBankPicker(){
+ const host=$('bank-picker-list');blank(host);if(!bankReady)return;
+ const items=filteredBank($('bank-picker-search').value);
+ if(!items.length){host.append(newEl('p','empty','일치하는 문제가 없습니다.'));return;}
+ for(const b of items){
+  const row=newEl('div','bank-picker-item'),info=newEl('div','manage-item-info');
+  info.append(newEl('strong','',b.title),newEl('small','',`${b.category||'미분류'} · ${(b.attachments||[]).length}개 첨부`),newEl('p','bank-preview-excerpt',b.body.replace(/\*\*/g,'').slice(0,160)));
+  const already=[...document.querySelectorAll('.question-editor')].some(el=>el._bankSourceId===b.id);
+  const btn=action(already?'추가됨':'추가',()=>addBankToTemplate(b),'button button-primary button-small');btn.disabled=already;
+  row.append(info,btn);host.append(row);
+ }
+}
+function addBankToTemplate(b){
+ if(!bankReady){notice('문제은행 설치가 필요합니다.',true);return;}
+ const duplicate=[...document.querySelectorAll('.question-editor')].some(el=>el._bankSourceId===b.id);
+ if(duplicate){notice('이 템플릿 초안에 이미 추가한 문제입니다.',true);return;}
+ const editors=[...document.querySelectorAll('.question-editor')];
+ // Replace only a pristine blank editor; never overwrite a draft the admin wrote.
+ if(editors.length===1&&!editors[0]._questionId&&!editors[0]._bankSourceId&&!editors[0].querySelector('.question-text').value.trim()&&!editors[0].querySelector('.question-files').files.length)editors[0].remove();
+ const box=addQuestionEditor(b.body,null,b);renderBankPicker();
+ box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+async function cloneBankFiles(templateId,questionId,files){
+ const cloned=[];
+ for(const f of files){
+  const ext=String(f.path||'').match(/\.[a-zA-Z0-9]{1,12}$/)?.[0]||'';
+  const path=`${templateId}/${questionId}/${uuid()}${ext}`;
+  const result=await api.storage.from('exam-materials').copy(f.path,path);
+  if(result.error)throw Error(`문제은행 첨부자료 "${f.name}" 복사 실패: ${errorMessage(result.error)}. Storage 읽기·쓰기 권한을 확인하세요.`);
+  cloned.push({...f,path});
+ }
+ return cloned;
+}
+function addQuestionEditor(text='',q=null,bank=null){
  const box=newEl('div','question-editor');box._questionId=q?.id||null;
- box._attachments=Array.isArray(q?.attachments)?[...q.attachments]:[];
+ box._attachments=Array.isArray(q?.attachments)?[...q.attachments]:Array.isArray(bank?.attachments)?[...bank.attachments]:[];
+ box._bankSourceId=bank?.id||null;
  box._removedPaths=[];
- const title=newEl('label','', '실무 문제 설명');
+ const title=newEl('label','', bank ? `문제은행에서 추가: ${bank.title}` : '실무 문제 설명');
  const textarea=newEl('textarea','question-text');textarea.required=true;textarea.placeholder='문제 설명을 입력하세요. 일부 문장을 선택하여 굵게 표시할 수 있습니다.';textarea.value=text;
  const toolbar=newEl('div','question-toolbar');
  const boldButton=action('선택 영역 굵게',()=>{
@@ -285,6 +412,10 @@ function addQuestionEditor(text='',q=null){
  const stored=newEl('div','stored-attachments');
  const fileInput=newEl('input','question-files');fileInput.type='file';fileInput.multiple=true;fileInput.accept='image/*,.pdf,.txt,.csv,.json,.md,.docx,.xlsx,.pptx';
  box.append(title,textarea,toolbar,previewTitle,preview,filesLabel,stored,fileInput,newEl('p','file-hint','파일당 최대 50MB · 기존 첨부파일 유지 또는 제거 가능'));
+ const orderControls=newEl('div','question-order-controls');
+ orderControls.append(action('↑ 위로',()=>{const prior=box.previousElementSibling;if(prior?.classList.contains('question-editor'))$('question-editors').insertBefore(box,prior);},'button button-outline button-small'));
+ orderControls.append(action('↓ 아래로',()=>{const next=box.nextElementSibling;if(next?.classList.contains('question-editor'))$('question-editors').insertBefore(next,box);},'button button-outline button-small'));
+ box.append(orderControls);
  box.append(action('문항 제거',()=>{
   if(document.querySelectorAll('.question-editor').length>1)box.remove();
   else notice('최소 1개 문항이 필요합니다.',true);
@@ -324,7 +455,7 @@ async function saveTemplate(ev){
  ev.preventDefault();ensureAdmin();const form=ev.currentTarget;setBusy(form,true);
  try{
   const editors=[...document.querySelectorAll('.question-editor')];if(!editors.length)throw Error('최소 1개 문항이 필요합니다.');
-  const rows=editors.map((box,i)=>({box,id:box._questionId,body:box.querySelector('.question-text').value.trim(),order:i+1,files:[...box.querySelector('.question-files').files],keep:box._attachments,removed:box._removedPaths}));
+  const rows=editors.map((box,i)=>({box,id:box._questionId,body:box.querySelector('.question-text').value.trim(),order:i+1,files:[...box.querySelector('.question-files').files],keep:box._attachments,removed:box._removedPaths,bank:box._bankSourceId}));
   if(rows.some(x=>!x.body))throw Error('내용이 비어 있는 문항이 있습니다.');
   let t=editingTemplate;
   if(t){
@@ -348,8 +479,9 @@ async function saveTemplate(ev){
    }else{
     const q=check(await api.from('questions').insert({template_id:t.id,sort_order:x.order,body:x.body}).select().single());
     questionId=q.id;
+    const copied=x.bank?await cloneBankFiles(t.id,questionId,x.keep):[];
     const uploaded=await uploadMaterialFiles(t.id,questionId,x.files);
-    if(uploaded.length)check(await api.from('questions').update({attachments:uploaded}).eq('id',questionId));
+    if(copied.length||uploaded.length)check(await api.from('questions').update({attachments:[...copied,...uploaded]}).eq('id',questionId));
    }
   }
   for(const old of oldQs||[]){
@@ -595,6 +727,7 @@ async function exportPDF(a){ensureAdmin();const p=getCandidate(a.candidate_id),t
  }catch(err){notice('PDF 생성 실패: '+errorMessage(err),true);}
 }
 
-addQuestionEditor('AI 도구를 활용하여 주어진 실무 상황을 분석하고 해결 절차, 검증 방법, 최종 결과물을 제시하세요.');
+addQuestionEditor();
+resetBankForm();
 init();
 })();

@@ -49,3 +49,30 @@
 .finished-actions{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:12px;margin-top:26px;}
 .finished-actions .button{min-width:140px;}
 @media(max-width:650px){.finished-actions{flex-direction:column}.finished-actions .button{width:100%;}}
+
+
+/* V18: reusable question bank and picker */
+.bank-panel{margin-bottom:22px}
+.bank-form{background:#fafafa;border:1px solid var(--line);border-radius:12px;padding:22px;margin:20px 0 28px}
+.bank-form h3{font-size:16px;margin:0 0 8px}
+.bank-form .stored-attachments{display:grid;gap:7px}
+.bank-form input[type=file]{width:100%}
+.bank-form-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.bank-library-header{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:20px}
+.bank-library-header h3{margin:0;font-size:17px}
+.bank-library-header input{min-width:min(100%,290px)}
+.bank-list{margin-top:12px}
+.bank-list .manage-item{align-items:flex-start}
+.bank-list .manage-item-info{flex:1}
+.bank-list .manage-actions{justify-content:flex-end}
+.bank-preview-excerpt{font-size:12px;color:#555;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;margin:5px 0 0}
+.bank-insert-bar{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin:15px 0}
+.bank-picker{border:1px solid #d4d4d4;border-radius:12px;padding:17px;background:#fafafa;margin:8px 0 18px}
+.bank-picker-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.bank-picker>input{width:100%;margin-bottom:10px}
+.bank-picker-list{max-height:360px;overflow-y:auto}
+.bank-picker-item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 0;border-bottom:1px solid var(--line)}
+.bank-picker-item .manage-item-info{flex:1}
+.bank-picker-item:last-child{border-bottom:0}
+.question-order-controls{display:flex;gap:7px;margin:15px 0}
+@media(max-width:650px){.bank-form{padding:14px}.bank-picker-item{align-items:flex-start}.bank-list .manage-item{flex-direction:column;align-items:stretch}.bank-list .manage-actions{justify-content:flex-start}}
