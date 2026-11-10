@@ -90,3 +90,7 @@
 .question-editor-source{font-size:11px;color:#666;overflow-wrap:anywhere}
 .bank-action-toast{position:fixed;top:94px;right:24px;z-index:9999;max-width:min(390px,calc(100vw - 32px));padding:14px 18px;background:#202020;color:#fff;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);font-size:13px;font-weight:600;line-height:1.5;pointer-events:none}
 @media(max-width:650px){.bank-action-toast{top:76px;right:16px}}
+
+/* V22: PDF export help text in admin submissions */
+.pdf-export-note{font-size:12px;line-height:1.7;color:var(--muted);margin:0 0 16px;padding:11px 14px;background:var(--soft);border:1px solid var(--line);border-radius:9px}
+.pdf-export-note strong{color:var(--ink)}

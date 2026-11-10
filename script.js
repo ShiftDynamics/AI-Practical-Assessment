@@ -646,7 +646,7 @@ async function deleteAssignment(a){if(!confirm(`해당 시험 배정과 답안�
 function renderSubmissions(){const tbody=$('submission-rows');blank(tbody);
  for(const a of all.assignments){const t=getAttempt(a.id);if(!t||!closedStatuses.includes(t.status))continue;
  const p=getCandidate(a.candidate_id),tr=document.createElement('tr');for(const val of [`${p?.display_name||''} (${p?.username||''})`,a.exam_title,`${labelStatus(a,t)} · ${fmt(t.finished_at)}`])tr.append(newEl('td','',val));
- const td=newEl('td');td.append(action('답안 보기',()=>showSubmission(a)),action('PDF 다운로드',()=>exportPDF(a)));tr.append(td);tbody.append(tr);
+ const td=newEl('td');td.append(action('답안 보기',()=>showSubmission(a)),action('구분형 PDF 다운로드',()=>exportPDF(a)));tr.append(td);tbody.append(tr);
  }if(!tbody.children.length)tbody.append(emptyRow(4,'제출된 답안이 없습니다.'));
 }
 async function showSubmission(a){const box=$('answer-detail');blank(box);box.hidden=false;const p=getCandidate(a.candidate_id);
@@ -768,18 +768,123 @@ function makePdf(jpegs,W=595.28,H=841.89){const enc=new TextEncoder(),parts=[],o
  const obj=(id,str)=>{offsets[id]=pos;push(`${id} 0 obj\n${str}\nendobj\n`);};push('%PDF-1.4\n');obj(1,'<< /Type /Catalog /Pages 2 0 R >>');const ids=jpegs.map((_,i)=>3+i*3);obj(2,`<< /Type /Pages /Kids [${ids.map(n=>`${n} 0 R`).join(' ')}] /Count ${ids.length} >>`);
  jpegs.forEach((im,i)=>{const p=ids[i],img=p+1,content=p+2;obj(p,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /I${i} ${img} 0 R >> >> /Contents ${content} 0 R >>`);offsets[img]=pos;push(`${img} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.bytes.length} >>\nstream\n`);push(im.bytes);push('\nendstream\nendobj\n');const draw=`q\n${W} 0 0 ${H} 0 0 cm\n/I${i} Do\nQ\n`;obj(content,`<< /Length ${enc.encode(draw).length} >>\nstream\n${draw}endstream`);});const xref=pos,max=2+jpegs.length*3;push(`xref\n0 ${max+1}\n0000000000 65535 f \n`);for(let i=1;i<=max;i++)push(`${String(offsets[i]).padStart(10,'0')} 00000 n \n`);push(`trailer\n<< /Size ${max+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);return new Blob(parts,{type:'application/pdf'});}
 function bytesFromDataUrl(u){const v=atob(u.split(',')[1]),b=new Uint8Array(v.length);for(let i=0;i<v.length;i++)b[i]=v.charCodeAt(i);return b;}
-async function exportPDF(a){ensureAdmin();const p=getCandidate(a.candidate_id),t=getAttempt(a.id),qs=all.questions.filter(q=>q.template_id===a.template_id).sort((x,y)=>x.sort_order-y.sort_order);
- const W=1240,H=1754,M=78,BOTTOM=H-95,TEXTW=W-2*M,pg=[];let canvas,ctx,y;
- function page(){canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.fillStyle='#121212';ctx.fillRect(M,55,80,7);ctx.font='700 20px sans-serif';ctx.fillText('SHIFT DYNAMICS · AI ASSESSMENT',M,100);y=145;}
- function complete(){pg.push({w:W,h:H,bytes:bytesFromDataUrl(canvas.toDataURL('image/jpeg',.86))});}
- function next(){complete();page();}function requireSpace(h){if(y+h>BOTTOM)next();}
- function write(value,size=24,bold=false){ctx.font=`${bold?'700':'400'} ${size}px sans-serif`;const lh=Math.round(size*1.55);for(const paragraph of String(value??'').replace(/\r/g,'').split('\n')){let row='';for(const ch of paragraph){if(row&&ctx.measureText(row+ch).width>TEXTW){requireSpace(lh);ctx.fillStyle='#121212';ctx.fillText(row,M,y+size);y+=lh;row=ch;}else row+=ch;}requireSpace(lh);ctx.fillStyle='#121212';ctx.fillText(row,M,y+size);y+=lh;}y+=12;}
- async function files(fs){for(const f of fs||[]){write(`첨부: ${f.name}`,18);
- if(/^image\//.test(f.type||'')){try{const {data,error}=await api.storage.from('answer-files').createSignedUrl(f.path,120);if(error)throw error;const img=new Image();img.crossOrigin='anonymous';await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=data.signedUrl;});const scale=Math.min(TEXTW/img.width,425/img.height);const w=img.width*scale,h=img.height*scale;requireSpace(h+20);ctx.drawImage(img,M,y,w,h);y+=h+18;}catch{write('(이미지 표시 실패 — 원본 첨부파일 별도 확인)',18);}}
- }}
- try{page();write('AI PRACTICAL ASSESSMENT',38,true);write(`후보자: ${p?.display_name||''} (${p?.username||''})`,24);write(`시험: ${a.exam_title}`,24);write(`시작: ${fmt(t?.started_at)} · 종료: ${fmt(t?.finished_at)}`,20);write(`상태: ${labelStatus(a,t)}`,20);
- for(const [i,q] of qs.entries()){requireSpace(145);ctx.strokeStyle='#ddd';ctx.beginPath();ctx.moveTo(M,y);ctx.lineTo(W-M,y);ctx.stroke();y+=20;write(`문항 ${i+1}`,29,true);write(q.body.replace(/\*\*/g,''),23);write('후보자 답안',21,true);const ans=all.answers.find(x=>x.assignment_id===a.id&&x.question_id===q.id);write(ans?.content||'(답안 없음)',23);await files(ans?.attachments);}
- complete();blobDownload(`SD_답안_${slug(p?.username||a.candidate_id)}_${slug(a.exam_title)}.pdf`,makePdf(pg));notice('PDF 다운로드를 시작했습니다. Word·Excel 등은 파일명만 포함되므로 원본 파일은 답안 보기에서 내려받으세요.');
+async function exportPDF(a){
+ ensureAdmin();
+ const p=getCandidate(a.candidate_id),t=getAttempt(a.id);
+ // Fetch directly to avoid missing questions/answers when the admin list grows.
+ const [questionResult,answerResult]=await Promise.all([
+  api.from('questions').select('id,body,sort_order').eq('template_id',a.template_id).order('sort_order'),
+  api.from('answers').select('question_id,content,attachments').eq('assignment_id',a.id)
+ ]);
+ const qs=check(questionResult)||[],answers=check(answerResult)||[];
+ const answerByQuestion=new Map(answers.map(v=>[v.question_id,v]));
+ const W=1240,H=1754,M=82,RIGHT=W-M,BOTTOM=H-118,pg=[];
+ const COLOR={ink:'#20242a',secondary:'#647081',line:'#dce2e9',surface:'#f2f5f8',navy:'#182638',white:'#ffffff',accent:'#3e647e',answer:'#e8eff5'};
+ let canvas,ctx,y=0,pageNumber=0;
+ function setFont(size=23,weight=400){ctx.font=`${weight} ${size}px "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;ctx.textBaseline='top';}
+ function nextPage(){
+  if(canvas)finishPage();
+  pageNumber++;
+  canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+  ctx=canvas.getContext('2d');if(!ctx)throw Error('PDF 출력용 Canvas를 생성하지 못했습니다.');
+  ctx.fillStyle=COLOR.white;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=COLOR.navy;ctx.fillRect(0,0,W,13);
+  setFont(20,700);ctx.fillStyle=COLOR.navy;ctx.fillText('SHIFT DYNAMICS  /  AI ASSESSMENT',M,48);
+  ctx.strokeStyle=COLOR.line;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(M,90);ctx.lineTo(RIGHT,90);ctx.stroke();
+  y=125;
+ }
+ function finishPage(){
+  ctx.strokeStyle=COLOR.line;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(M,H-88);ctx.lineTo(RIGHT,H-88);ctx.stroke();
+  setFont(17,400);ctx.fillStyle=COLOR.secondary;
+  ctx.fillText('CONFIDENTIAL  ·  SHIFT DYNAMICS',M,H-70);
+  ctx.textAlign='right';ctx.fillText(`Page ${pageNumber}`,RIGHT,H-70);ctx.textAlign='left';
+  pg.push({w:W,h:H,bytes:bytesFromDataUrl(canvas.toDataURL('image/jpeg',0.92))});
+ }
+ function room(height){if(y+height>BOTTOM)nextPage();}
+ function rule(){room(26);ctx.strokeStyle=COLOR.line;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(M,y+11);ctx.lineTo(RIGHT,y+11);ctx.stroke();y+=27;}
+ function textLines(raw,{size=23,color=COLOR.ink,left=M+16,right=RIGHT-16,lineHeight=37,emptyText='(내용 없음)',rowFill=null,bar=null}={}){
+  const value=String(raw??'').replace(/\r\n?/g,'\n')||emptyText;
+  // Always set font on EVERY measurement/draw, including immediately after a page break.
+  // This prevents bold page headers from leaking into normal question/answer text.
+  const innerWidth=right-left;
+  const writeRow=row=>{
+   room(lineHeight+7);setFont(size,400);
+   if(rowFill){ctx.fillStyle=rowFill;ctx.fillRect(left-16,y-4,innerWidth+32,lineHeight+9);}
+   if(bar){ctx.fillStyle=bar;ctx.fillRect(left-16,y-4,5,lineHeight+9);}
+   ctx.fillStyle=color;ctx.fillText(row,left,y+4);y+=lineHeight+7;
+  };
+  for(const paragraph of value.split('\n')){
+   if(!paragraph){writeRow('');continue;}
+   let line='';
+   for(const ch of paragraph){
+    setFont(size,400);
+    if(line&&ctx.measureText(line+ch).width>innerWidth){writeRow(line);line=ch;}
+    else line+=ch;
+   }
+   writeRow(line);
+  }
+ }
+ function sectionHeading(label,index,kind){
+  room(94);
+  const bg=kind==='question'?COLOR.surface:COLOR.navy;
+  ctx.fillStyle=bg;ctx.fillRect(M,y,RIGHT-M,62);
+  ctx.fillStyle=kind==='question'?COLOR.accent:COLOR.white;
+  setFont(24,700);ctx.fillText(`${index}.  ${label}`,M+24,y+16);
+  y+=79;
+ }
+ function meta(label,value){
+  room(44);setFont(20,400);ctx.fillStyle=COLOR.secondary;ctx.fillText(label,M+8,y);
+  textInline(String(value??'—'),M+190,y,22,COLOR.ink);y+=42;
+ }
+ function textInline(value,x,baseline,size=22,color=COLOR.ink){
+  setFont(size,400);ctx.fillStyle=color;
+  // Metadata can be long; truncate here, the complete exam title is also in the DB.
+  const max=RIGHT-x-10;while(value.length>1&&ctx.measureText(value).width>max)value=value.slice(0,-2)+'…';
+  ctx.fillText(value,x,baseline);
+ }
+ async function attachments(files){
+  if(!files?.length)return;
+  y+=10;room(50);setFont(19,700);ctx.fillStyle=COLOR.secondary;ctx.fillText(`첨부파일 ${files.length}개`,M+16,y);y+=38;
+  for(const f of files){
+   textLines(`• ${f.name}`,{size:19,lineHeight:28,left:M+24,right:RIGHT-20,color:COLOR.secondary});
+   if(!/^image\//.test(f.type||''))continue;
+   try{
+    const {data,error}=await api.storage.from('answer-files').createSignedUrl(f.path,120);
+    if(error)throw error;
+    const image=new Image();image.crossOrigin='anonymous';
+    await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;image.src=data.signedUrl;});
+    const scale=Math.min((RIGHT-M-48)/image.width,390/image.height,1);
+    const w=Math.round(image.width*scale),h=Math.round(image.height*scale);
+    room(h+24);ctx.drawImage(image,M+24,y,w,h);y+=h+24;
+   }catch{ textLines('(이미지 미리보기를 포함하지 못했습니다. 관리자 화면에서 원본을 확인하세요.)',{size:17,color:COLOR.secondary,lineHeight:25}); }
+  }
+ }
+ try{
+  nextPage();
+  room(90);setFont(38,700);ctx.fillStyle=COLOR.navy;ctx.fillText('후보자 시험 답안',M,y);y+=72;
+  ctx.fillStyle=COLOR.surface;ctx.fillRect(M,y,RIGHT-M,199);y+=22;
+  meta('후보자',`${p?.display_name||''} (${p?.username||''})`);
+  meta('시험명',a.exam_title);
+  meta('응시 상태',labelStatus(a,t));
+  meta('응시 일시',`${fmt(t?.started_at)} ~ ${fmt(t?.finished_at)}`);
+  y+=38;
+  for(const [i,q] of qs.entries()){
+   room(190);rule();room(65);
+   setFont(26,700);ctx.fillStyle=COLOR.navy;ctx.fillText(`QUESTION ${String(i+1).padStart(2,'0')}`,M+6,y);y+=57;
+   sectionHeading('문제',i+1,'question');
+   // Markdown emphasis markers are formatting syntax, not part of the plain-text PDF.
+   // The problem body and the candidate answer are ALWAYS drawn at normal font weight.
+   textLines(String(q.body||'').replace(/\*\*/g,''),{size:23,lineHeight:36,rowFill:COLOR.surface,bar:COLOR.accent});
+   y+=32;
+   room(100);sectionHeading('후보자 답안',i+1,'answer');
+   const ans=answerByQuestion.get(q.id);
+   textLines(ans?.content||'(작성된 답안 없음)',{size:23,lineHeight:38});
+   await attachments(ans?.attachments||[]);
+   y+=38;
+  }
+  finishPage();
+  blobDownload(`SD_답안_${slug(p?.username||a.candidate_id)}_${slug(a.exam_title)}.pdf`,makePdf(pg));
+  notice('문제와 후보자 답안을 구분한 PDF 다운로드를 시작했습니다. Word·Excel 등 비이미지 첨부파일은 파일명만 포함됩니다. 원본은 답안 보기에서 확인하세요.');
  }catch(err){notice('PDF 생성 실패: '+errorMessage(err),true);}
 }
 
