@@ -183,6 +183,7 @@ function bindEvents(){
  $('bank-form').addEventListener('submit',saveBankQuestion);
  $('bank-cancel').addEventListener('click',resetBankForm);
  $('bank-body').addEventListener('input',renderBankPreview);
+ keepTextSelectionOnToolbarClick($('bank-bold'));
  $('bank-bold').addEventListener('click',()=>boldSelectedText($('bank-body')));
  $('bank-search').addEventListener('input',renderBankList);
  $('bank-picker-search').addEventListener('input',renderBankPicker);
@@ -262,14 +263,23 @@ async function deleteCandidate(p){if(!confirm(`${p.display_name} 후보자와 �
  if(prompt('삭제할 후보자의 아이디를 정확히 입력하세요.')!==p.username)return;
  await edge('delete',{id:p.id});await refreshAdmin();notice('후보자를 삭제했습니다. 저장소에 남은 첨부파일은 별도 정리할 수 있습니다.');
 }
-// Store bold styling using a deliberately small, safe Markdown subset: **bold** only.
-// Never inject question text as HTML: all text nodes are created through textContent.
+// V19: Escape-safe selective emphasis. Supports bold spanning multiple lines and
+// adjacent marked spans; unmatched markers remain literal. Never use innerHTML.
 function formattedQuestion(textValue){
  const fragment=document.createDocumentFragment();
- const parts=String(textValue??'').split(/(\*\*[^*\n]+\*\*)/g);
- for(const part of parts){
-  if(/^\*\*[^*\n]+\*\*$/.test(part)){const strong=document.createElement('strong');strong.textContent=part.slice(2,-2);fragment.append(strong);}
-  else fragment.append(document.createTextNode(part));
+ const text=String(textValue??'');
+ let cursor=0;
+ while(cursor<text.length){
+  const open=text.indexOf('**',cursor);
+  if(open===-1){fragment.append(document.createTextNode(text.slice(cursor)));break;}
+  const close=text.indexOf('**',open+2);
+  if(close===-1){fragment.append(document.createTextNode(text.slice(cursor)));break;}
+  if(open>cursor)fragment.append(document.createTextNode(text.slice(cursor,open)));
+  const content=text.slice(open+2,close);
+  if(content.trim()){
+   const strong=document.createElement('strong');strong.textContent=content;fragment.append(strong);
+  }else fragment.append(document.createTextNode('**'+content+'**'));
+  cursor=close+2;
  }
  return fragment;
 }
@@ -284,11 +294,29 @@ function renderStoredFiles(box){
   area.append(row);
  }
 }
+// Bold button works as a toggle: select plain text to bold it, or select an
+// already-marked span to remove bold. Preserve the textarea selection when
+// clicking the toolbar button (mousedown normally moves focus to the button).
 function boldSelectedText(textarea){
  const from=textarea.selectionStart,to=textarea.selectionEnd;
- if(from===to){notice('먼저 굵게 표시할 문장을 선택하세요.',true);textarea.focus();return;}
- textarea.setRangeText(`**${textarea.value.slice(from,to)}**`,from,to,'select');
+ if(from===to){notice('먼저 굵게 표시할 문장을 드래그하여 선택하세요.',true);textarea.focus();return;}
+ const source=textarea.value,chosen=source.slice(from,to);
+ let replacement,selectionFrom=from,selectionTo=to;
+ if(chosen.startsWith('**')&&chosen.endsWith('**')&&chosen.length>4){
+  replacement=chosen.slice(2,-2);selectionTo=from+replacement.length;
+ }else if(source.slice(Math.max(0,from-2),from)==='**'&&source.slice(to,to+2)==='**'){
+  // Selection contains the content only, but its surrounding markers exist.
+  textarea.setRangeText(chosen,from-2,to+2,'select');
+  textarea.setSelectionRange(from-2,to);textarea.dispatchEvent(new Event('input',{bubbles:true}));textarea.focus();return;
+ }else{
+  replacement=`**${chosen}**`;selectionFrom=from+2;selectionTo=selectionFrom+chosen.length;
+ }
+ textarea.setRangeText(replacement,from,to,'preserve');
+ textarea.setSelectionRange(selectionFrom,selectionTo);
  textarea.dispatchEvent(new Event('input',{bubbles:true}));textarea.focus();
+}
+function keepTextSelectionOnToolbarClick(button){
+ button.addEventListener('mousedown',event=>event.preventDefault());
 }
 function renderBankPreview(){const box=$('bank-preview');blank(box);box.append(formattedQuestion($('bank-body').value));}
 function renderBankStoredFiles(){
@@ -398,12 +426,9 @@ function addQuestionEditor(text='',q=null,bank=null){
  const title=newEl('label','', bank ? `문제은행에서 추가: ${bank.title}` : '실무 문제 설명');
  const textarea=newEl('textarea','question-text');textarea.required=true;textarea.placeholder='문제 설명을 입력하세요. 일부 문장을 선택하여 굵게 표시할 수 있습니다.';textarea.value=text;
  const toolbar=newEl('div','question-toolbar');
- const boldButton=action('선택 영역 굵게',()=>{
-  const from=textarea.selectionStart,to=textarea.selectionEnd;
-  if(from===to){notice('먼저 굵게 표시할 문장을 선택하세요.',true);textarea.focus();return;}
-  const selected=textarea.value.slice(from,to);textarea.setRangeText(`**${selected}**`,from,to,'select');textarea.dispatchEvent(new Event('input',{bubbles:true}));textarea.focus();
- },'button button-outline button-small');
- toolbar.append(boldButton,newEl('span','file-hint','선택한 부분만 **굵게** 처리됩니다.'));
+ const boldButton=action('선택 영역 굵게 / 해제',()=>boldSelectedText(textarea),'button button-outline button-small');
+ keepTextSelectionOnToolbarClick(boldButton);
+ toolbar.append(boldButton,newEl('span','file-hint','문장을 드래그하여 선택한 뒤 누르세요. 다시 누르면 해제됩니다. 여러 줄 선택도 지원합니다.'));
  const previewTitle=newEl('label','','문항 미리보기');
  const preview=newEl('div','question-preview template-question-body');
  const refreshPreview=()=>{blank(preview);preview.append(formattedQuestion(textarea.value));};
