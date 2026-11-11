@@ -311,12 +311,14 @@ function renderCandidates(){const list=$('candidate-list');blank(list);
  updateCandidateBulkControls();
  if(!all.profiles.length){list.append(newEl('p','empty','등록된 후보자가 없습니다.'));return;}
  for(const p of all.profiles){
-  const row=newEl('div','manage-item bulk-row');
+  const row=newEl('div','manage-item bulk-row candidate-manage-row');
+  const details=newEl('div','candidate-select-details');
   const checkbox=newEl('input','bulk-row-select');checkbox.type='checkbox';checkbox.checked=selectedCandidateIds.has(p.id);
   checkbox.disabled=bulkDeleteRunning;checkbox.setAttribute('aria-label',`${p.display_name} (${p.username}) 선택`);
   checkbox.addEventListener('change',()=>{checkbox.checked?selectedCandidateIds.add(p.id):selectedCandidateIds.delete(p.id);updateCandidateBulkControls();});
   const info=newEl('div','manage-item-info');info.append(newEl('strong','',p.display_name),newEl('small','',p.username));
-  row.append(checkbox,info,action('삭제',()=>deleteCandidate(p),'button button-danger button-small'));list.append(row);
+  details.append(checkbox,info);
+  row.append(details,action('삭제',()=>deleteCandidate(p),'button button-danger button-small'));list.append(row);
  }
 }
 async function bulkDeleteCandidates(){

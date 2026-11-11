@@ -101,3 +101,11 @@
 .bulk-row{gap:12px}.bulk-row-select:focus-visible{outline:2px solid #121212;outline-offset:3px}
 .bulk-toolbar .button:disabled{opacity:.45}
 @media(max-width:650px){.bulk-toolbar{gap:9px}.bulk-count{margin-right:0}.bulk-toolbar .button{width:100%}.bulk-row{align-items:flex-start}.bulk-row-select{margin-top:4px}}
+
+
+/* V25: Candidate name and user ID sit directly beside the selection checkbox. */
+#candidate-list .candidate-manage-row{display:flex;align-items:center;justify-content:space-between;gap:14px}
+#candidate-list .candidate-select-details{display:flex;align-items:center;justify-content:flex-start;gap:12px;flex:1;min-width:0;text-align:left}
+#candidate-list .candidate-select-details .manage-item-info{flex:1;align-items:flex-start;text-align:left;min-width:0}
+#candidate-list .candidate-manage-row>.button{flex-shrink:0;margin-left:auto}
+@media(max-width:650px){#candidate-list .candidate-manage-row{align-items:center}#candidate-list .candidate-select-details{gap:10px}#candidate-list .candidate-manage-row .bulk-row-select{margin-top:0}}
