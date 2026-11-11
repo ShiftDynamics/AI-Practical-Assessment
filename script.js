@@ -139,6 +139,10 @@ function pinFinishedScreen(){ const key=finishMarkerKey(); if(key){try{sessionSt
 function hasPinnedFinishedScreen(){ const key=finishMarkerKey();if(!key)return false;try{return sessionStorage.getItem(key)==='1';}catch{return false;} }
 function clearFinishedScreenPin(){ const key=finishMarkerKey();if(key){try{sessionStorage.removeItem(key);}catch{}} }
 
+// V24: selections are independent and persist while filtering the question bank.
+const selectedCandidateIds=new Set();
+const selectedBankIds=new Set();
+let bulkDeleteRunning=false;
 let editingTemplate=null;
 let editingBank=null;
 let bankSavedAttachments=[];
@@ -213,6 +217,17 @@ function bindEvents(){
  keepTextSelectionOnToolbarClick($('bank-bold'));
  $('bank-bold').addEventListener('click',()=>boldSelectedText($('bank-body')));
  $('bank-search').addEventListener('input',renderBankList);
+ $('candidate-select-all').addEventListener('change',ev=>{
+  for(const p of all.profiles)ev.target.checked?selectedCandidateIds.add(p.id):selectedCandidateIds.delete(p.id);
+  renderCandidates();
+ });
+ $('candidate-delete-selected').addEventListener('click',()=>bulkDeleteCandidates().catch(err=>notice(errorMessage(err),true)));
+ $('bank-select-all').addEventListener('change',ev=>{
+  for(const b of filteredBank($('bank-search').value))ev.target.checked?selectedBankIds.add(b.id):selectedBankIds.delete(b.id);
+  renderBankList();
+ });
+ $('bank-delete-selected').addEventListener('click',()=>bulkDeleteBankQuestions().catch(err=>notice(errorMessage(err),true)));
+
  $('bank-picker-search').addEventListener('input',renderBankPicker);
  $('open-bank-picker').addEventListener('click',()=>{if(!bankReady){notice('먼저 question_bank.sql을 실행하세요.',true);return;} $('bank-picker').hidden=false;renderBankPicker();$('bank-picker').scrollIntoView({behavior:'smooth',block:'nearest'});});
  $('close-bank-picker').addEventListener('click',()=>{$('bank-picker').hidden=true;});
@@ -282,9 +297,46 @@ async function createCandidate(ev){ev.preventDefault();const f=ev.currentTarget;
  try{await edge('create',{username:$('candidate-id').value.trim(),name:$('candidate-name').value.trim(),password:$('candidate-password').value});f.reset();await refreshAdmin();notice('후보자 계정을 생성했습니다. 아이디와 초기 비밀번호를 안전하게 전달하세요.');}
  catch(err){notice(errorMessage(err),true);}finally{setBusy(f,false);}
 }
+function updateCandidateBulkControls(){
+ const selectable=new Set(all.profiles.map(p=>p.id));
+ for(const id of selectedCandidateIds)if(!selectable.has(id))selectedCandidateIds.delete(id);
+ const allCheckbox=$('candidate-select-all');
+ allCheckbox.checked=all.profiles.length>0&&all.profiles.every(p=>selectedCandidateIds.has(p.id));
+ allCheckbox.indeterminate=!allCheckbox.checked&&all.profiles.some(p=>selectedCandidateIds.has(p.id));
+ allCheckbox.disabled=bulkDeleteRunning||!all.profiles.length;
+ $('candidate-selected-count').textContent=`${selectedCandidateIds.size}명 선택됨`;
+ $('candidate-delete-selected').disabled=bulkDeleteRunning||selectedCandidateIds.size===0;
+}
 function renderCandidates(){const list=$('candidate-list');blank(list);
+ updateCandidateBulkControls();
  if(!all.profiles.length){list.append(newEl('p','empty','등록된 후보자가 없습니다.'));return;}
- for(const p of all.profiles){const row=newEl('div','manage-item');const info=newEl('div','manage-item-info');info.append(newEl('strong','',p.display_name),newEl('small','',p.username));row.append(info,action('삭제',()=>deleteCandidate(p),'button button-danger button-small'));list.append(row);}
+ for(const p of all.profiles){
+  const row=newEl('div','manage-item bulk-row');
+  const checkbox=newEl('input','bulk-row-select');checkbox.type='checkbox';checkbox.checked=selectedCandidateIds.has(p.id);
+  checkbox.disabled=bulkDeleteRunning;checkbox.setAttribute('aria-label',`${p.display_name} (${p.username}) 선택`);
+  checkbox.addEventListener('change',()=>{checkbox.checked?selectedCandidateIds.add(p.id):selectedCandidateIds.delete(p.id);updateCandidateBulkControls();});
+  const info=newEl('div','manage-item-info');info.append(newEl('strong','',p.display_name),newEl('small','',p.username));
+  row.append(checkbox,info,action('삭제',()=>deleteCandidate(p),'button button-danger button-small'));list.append(row);
+ }
+}
+async function bulkDeleteCandidates(){
+ ensureAdmin();if(bulkDeleteRunning)return;
+ const targets=all.profiles.filter(p=>selectedCandidateIds.has(p.id));if(!targets.length)return;
+ const preview=targets.slice(0,8).map(p=>`${p.display_name} (${p.username})`).join('\n');
+ if(!confirm(`후보자 ${targets.length}명을 삭제하시겠습니까?\n\n${preview}${targets.length>8?`\n외 ${targets.length-8}명`:''}\n\n연결된 시험 배정·제출 답안도 삭제될 수 있습니다. 백업을 먼저 확인하세요. 이 작업은 되돌릴 수 없습니다.`))return;
+ if(prompt(`최종 확인: 선택한 후보자 ${targets.length}명을 삭제하려면 '선택 삭제'를 정확히 입력하세요.`)!=='선택 삭제')return;
+ bulkDeleteRunning=true;updateCandidateBulkControls();let success=0;const errors=[];
+ try{
+  for(const p of targets){
+   try{await edge('delete',{id:p.id});selectedCandidateIds.delete(p.id);success++;}
+   catch(err){errors.push(`${p.username}: ${errorMessage(err)}`);}
+  }
+ }finally{
+  bulkDeleteRunning=false;
+  try{await refreshAdmin();}catch(err){errors.push(`목록 새로고침: ${errorMessage(err)}`);}
+  const msg=`후보자 일괄 삭제: 성공 ${success}명 / 실패 ${errors.length}건.${success?' 저장소에 첨부파일이 남아 있을 수 있습니다.':''}`;
+  notice(msg+(errors.length?`\n${errors.join('\n')}`:''),errors.length>0);
+ }
 }
 async function deleteCandidate(p){if(!confirm(`${p.display_name} 후보자와 모든 시험 배정·답안이 삭제됩니다. 먼저 결과를 백업하세요. 계속하시겠습니까?`))return;
  if(prompt('삭제할 후보자의 아이디를 정확히 입력하세요.')!==p.username)return;
@@ -390,18 +442,54 @@ function filteredBank(term){
  const q=String(term||'').trim().toLocaleLowerCase();
  return all.bank.filter(b=>!q||[b.title,b.category,b.body].some(s=>String(s||'').toLocaleLowerCase().includes(q)));
 }
+function updateBankBulkControls(){
+ const allIds=new Set(all.bank.map(b=>b.id));
+ for(const id of selectedBankIds)if(!allIds.has(id))selectedBankIds.delete(id);
+ const visible=filteredBank($('bank-search').value);
+ const checkbox=$('bank-select-all');
+ checkbox.checked=visible.length>0&&visible.every(b=>selectedBankIds.has(b.id));
+ checkbox.indeterminate=!checkbox.checked&&visible.some(b=>selectedBankIds.has(b.id));
+ checkbox.disabled=bulkDeleteRunning||!visible.length||!bankReady;
+ $('bank-selected-count').textContent=`${selectedBankIds.size}개 선택됨`;
+ $('bank-delete-selected').disabled=bulkDeleteRunning||!bankReady||selectedBankIds.size===0;
+}
 function renderBankList(){
- const host=$('bank-list');blank(host);
+ const host=$('bank-list');blank(host);updateBankBulkControls();
  if(!bankReady)return;
  const items=filteredBank($('bank-search').value);
  if(!items.length){host.append(newEl('p','empty',all.bank.length?'검색 결과가 없습니다.':'등록된 문제가 없습니다. 위에서 먼저 문제를 등록하세요.'));return;}
  for(const b of items){
-  const row=newEl('div','manage-item'),info=newEl('div','manage-item-info'),actions=newEl('div','manage-actions');
+  const row=newEl('div','manage-item bulk-row'),info=newEl('div','manage-item-info'),actions=newEl('div','manage-actions');
+  const checkbox=newEl('input','bulk-row-select');checkbox.type='checkbox';checkbox.checked=selectedBankIds.has(b.id);
+  checkbox.disabled=bulkDeleteRunning;checkbox.setAttribute('aria-label',`${b.title} 선택`);
+  checkbox.addEventListener('change',()=>{checkbox.checked?selectedBankIds.add(b.id):selectedBankIds.delete(b.id);updateBankBulkControls();});
   const title=action(b.title,()=>showBankQuestion(b),'template-title-button');
   const n=Array.isArray(b.attachments)?b.attachments.length:0;
   info.append(title,newEl('small','',`${b.category||'미분류'} · 첨부 ${n}개 · ${b.body.length}자`));
   actions.append(action('템플릿에 추가',()=>addBankToTemplate(b),'button button-outline button-small'),action('수정',()=>editBankQuestion(b),'button button-outline button-small'),action('삭제',()=>deleteBankQuestion(b),'button button-danger button-small'));
-  row.append(info,actions);host.append(row);
+  row.append(checkbox,info,actions);host.append(row);
+ }
+}
+async function bulkDeleteBankQuestions(){
+ ensureAdmin();if(!bankReady||bulkDeleteRunning)return;
+ const targets=all.bank.filter(b=>selectedBankIds.has(b.id));if(!targets.length)return;
+ const preview=targets.slice(0,8).map(b=>b.title).join('\n');
+ if(!confirm(`문제은행 문제 ${targets.length}개를 삭제하시겠습니까?\n\n${preview}${targets.length>8?`\n외 ${targets.length-8}개`:''}\n\n기존 템플릿으로 복사된 문제는 그대로 유지됩니다. Storage에 파일이 남을 수 있습니다.`))return;
+ if(prompt(`최종 확인: 선택한 문제 ${targets.length}개를 삭제하려면 '선택 삭제'를 정확히 입력하세요.`)!=='선택 삭제')return;
+ bulkDeleteRunning=true;updateBankBulkControls();let success=0;const errors=[];
+ try{
+  for(const b of targets){
+   try{
+    check(await api.from('question_bank').delete().eq('id',b.id));
+    if(editingBank?.id===b.id)resetBankForm();
+    selectedBankIds.delete(b.id);success++;
+   }catch(err){errors.push(`${b.title}: ${errorMessage(err)}`);}
+  }
+ }finally{
+  bulkDeleteRunning=false;
+  try{await refreshAdmin();}catch(err){errors.push(`목록 새로고침: ${errorMessage(err)}`);}
+  const msg=`문제은행 일괄 삭제: 성공 ${success}개 / 실패 ${errors.length}건. 기존 템플릿은 유지됩니다.${success?' Storage 원본 파일은 별도 정리가 필요할 수 있습니다.':''}`;
+  notice(msg+(errors.length?`\n${errors.join('\n')}`:''),errors.length>0);
  }
 }
 async function showBankQuestion(b){

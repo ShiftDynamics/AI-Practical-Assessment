@@ -92,3 +92,12 @@
 @media(max-width:650px){.bank-action-toast{top:76px;right:16px}}
 
 /* V22: PDF export help text in admin submissions */
+
+/* V24 — multi-select deletion in the question bank and candidate list */
+.bulk-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:13px 15px;margin:14px 0 4px;background:var(--soft);border:1px solid var(--line);border-radius:10px}
+.bulk-check-label{display:inline-flex;align-items:center;gap:8px;margin:0;font-size:12px;font-weight:700;cursor:pointer}
+.bulk-check-label input,.bulk-row-select{width:17px;height:17px;min-height:17px;max-width:17px;padding:0;margin:0;accent-color:#121212;flex:none;cursor:pointer}
+.bulk-count{font-size:12px;color:var(--muted);margin-right:auto}
+.bulk-row{gap:12px}.bulk-row-select:focus-visible{outline:2px solid #121212;outline-offset:3px}
+.bulk-toolbar .button:disabled{opacity:.45}
+@media(max-width:650px){.bulk-toolbar{gap:9px}.bulk-count{margin-right:0}.bulk-toolbar .button{width:100%}.bulk-row{align-items:flex-start}.bulk-row-select{margin-top:4px}}

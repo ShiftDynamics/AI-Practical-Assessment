@@ -32,7 +32,11 @@
   <nav id="admin-tabs" class="admin-tabs" aria-label="평가 운영 메뉴">
    <button class="admin-tab active" data-tab="candidates">후보자 등록</button><button class="admin-tab" data-tab="templates">시험 템플릿 생성</button><button class="admin-tab" data-tab="assignments">시험 배정 및 일정 설정</button><button class="admin-tab" data-tab="progress">시험 진행 현황</button><button class="admin-tab" data-tab="submissions">시험 제출 답안</button>
   </nav>
-  <section id="admin-candidates" class="admin-page"><div class="card panel"><div class="panel-heading"><h2>후보자 등록</h2><span class="eyebrow">ACCOUNT</span></div><form id="candidate-form" class="stack-form narrow"><label>후보자 이름</label><input id="candidate-name" required placeholder="홍길동"><label>로그인 아이디</label><input id="candidate-id" required pattern="[A-Za-z0-9_-]{4,40}" placeholder="SD-2026-002"><label>초기 비밀번호 (10자 이상)</label><input id="candidate-password" type="password" required minlength="10" autocomplete="new-password"><button class="button button-primary" type="submit">후보자 등록 +</button></form></div><div class="card panel"><h2>등록된 후보자</h2><div id="candidate-list" class="small-list"></div></div></section>
+  <section id="admin-candidates" class="admin-page"><div class="card panel"><div class="panel-heading"><h2>후보자 등록</h2><span class="eyebrow">ACCOUNT</span></div><form id="candidate-form" class="stack-form narrow"><label>후보자 이름</label><input id="candidate-name" required placeholder="홍길동"><label>로그인 아이디</label><input id="candidate-id" required pattern="[A-Za-z0-9_-]{4,40}" placeholder="SD-2026-002"><label>초기 비밀번호 (10자 이상)</label><input id="candidate-password" type="password" required minlength="10" autocomplete="new-password"><button class="button button-primary" type="submit">후보자 등록 +</button></form></div><div class="card panel"><h2>등록된 후보자</h2><div class="bulk-toolbar" id="candidate-bulk-toolbar">
+     <label class="bulk-check-label"><input type="checkbox" id="candidate-select-all" aria-label="후보자 전체 선택"> 전체 선택</label>
+     <span id="candidate-selected-count" class="bulk-count" aria-live="polite">0명 선택됨</span>
+     <button type="button" id="candidate-delete-selected" class="button button-danger button-small" disabled>선택 후보자 삭제</button>
+    </div><div id="candidate-list" class="small-list"></div></div></section>
   <section id="admin-templates" class="admin-page" hidden>
    <div class="card panel bank-panel">
     <div class="panel-heading"><h2>문제은행 관리</h2><span class="eyebrow">QUESTION LIBRARY</span></div>
@@ -50,7 +54,11 @@
      <div class="bank-form-actions"><button id="bank-save" class="button button-primary" type="submit">문제은행에 저장</button><button id="bank-cancel" class="button button-outline" type="button" hidden>수정 취소</button></div>
     </form>
     <div class="bank-library-header"><h3>등록된 문제</h3><input id="bank-search" type="search" placeholder="문제 이름·분류·본문 검색" aria-label="문제은행 검색"></div>
-    <div id="bank-list" class="bank-list"></div>
+    <div class="bulk-toolbar" id="bank-bulk-toolbar">
+     <label class="bulk-check-label"><input type="checkbox" id="bank-select-all" aria-label="현재 검색 결과 전체 선택"> 검색 결과 전체 선택</label>
+     <span id="bank-selected-count" class="bulk-count" aria-live="polite">0개 선택됨</span>
+     <button type="button" id="bank-delete-selected" class="button button-danger button-small" disabled>선택 문제 삭제</button>
+    </div><div id="bank-list" class="bank-list"></div>
     <div id="bank-detail" class="template-detail" hidden></div>
    </div>
    <div class="card panel"><div class="panel-heading"><h2 id="template-form-heading">시험 템플릿 생성</h2><span class="eyebrow">QUESTION BANK</span></div><form id="template-form" class="stack-form"><label>시험 템플릿 이름</label><input id="template-title" required placeholder="SW 엔지니어 AI 실무 과제"><label>지원 포지션</label><input id="template-position" required placeholder="Software Engineer"><p id="template-edit-help" class="file-hint">굵게 표시할 문장을 선택한 뒤 ‘선택 영역 굵게’ 버튼을 누르세요. **표시** 형식으로 저장됩니다.</p><div class="bank-insert-bar"><button id="open-bank-picker" type="button" class="button button-outline">+ 문제은행에서 선택</button><span class="file-hint">문제은행의 문제를 선택해 템플릿에 추가합니다.</span></div>
