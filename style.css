@@ -109,3 +109,15 @@
 #candidate-list .candidate-select-details .manage-item-info{flex:1;align-items:flex-start;text-align:left;min-width:0}
 #candidate-list .candidate-manage-row>.button{flex-shrink:0;margin-left:auto}
 @media(max-width:650px){#candidate-list .candidate-manage-row{align-items:center}#candidate-list .candidate-select-details{gap:10px}#candidate-list .candidate-manage-row .bulk-row-select{margin-top:0}}
+
+/* V26: admin list/search filters */
+.admin-filter-bar{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:14px 0 12px;padding:12px 14px;background:var(--soft);border:1px solid var(--line);border-radius:10px}
+.filter-field{display:flex;flex-direction:column;gap:6px;min-width:210px;flex:1 1 240px;margin:0;font-size:12px;font-weight:700}
+.filter-field input,.filter-field select{width:100%;min-height:40px;background:white}
+.filter-count{color:var(--muted);font-size:12px;white-space:nowrap;margin-bottom:9px}
+/* A native file input's button language follows the browser/OS locale, not the site locale. */
+.localized-file-picker{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:5px}
+.visually-hidden-file{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important;border:0!important;opacity:0!important}
+.file-picker-button{display:inline-flex;justify-content:center;align-items:center;cursor:pointer;margin:0!important;font-weight:700!important}
+.visually-hidden-file:focus-visible+.file-picker-button{outline:2px solid #121212;outline-offset:3px}
+@media(max-width:650px){.filter-field{min-width:100%;flex-basis:100%}.admin-filter-bar{gap:8px}}

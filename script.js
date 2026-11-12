@@ -19,7 +19,7 @@ const I18N = {
   supportPrefix:'오류 또는 문의사항이 있으신 경우,',supportSuffix:'로 남겨주세요.',
   leaveWarning:'시험 진행 중 새로고침·로그아웃·페이지 이탈 시 재접속할 수 없습니다.',
   timeRemaining:'남은 시간',examHelp:'AI 도구를 활용하여 실무 문제를 해결하고, 과정과 결과물을 제출하세요.',
-  questionList:'문항 목록',answerLabel:'답안 작성',
+  questionList:'문항 목록',answerLabel:'답안 작성',questionUnit:'문항',chooseFiles:'파일 선택',
   answerPlaceholder:'답안을 작성하세요.',fileLabel:'결과물 첨부',
   savePending:'자동저장 대기',previous:'← 이전',saveDraft:'임시저장',next:'다음 →',submit:'시험 최종 제출 →',
   finishedTitle:'시험이 종료되었습니다.\n좋은 결과 있으시길 바랍니다.',
@@ -38,7 +38,7 @@ const I18N = {
   switchError:'답안을 저장하지 못해 문항을 이동하지 않았습니다.',
   maxFiles:'한 문항에 파일은 최대 10개까지 첨부할 수 있습니다.',uploading:'첨부파일 업로드 중',
   candidateUploadLimit:'파일당 최대 50MB',overSize:'50MB를 초과했습니다.',uploadFail:'첨부파일 업로드/저장 실패',
-  attachmentLink:'파일 보기 / 다운로드',previewFail:'미리보기 불가',removeFile:'첨부 목록에서 제거',
+  attachmentLink:'파일 다운로드',previewFail:'미리보기 불가',removeFile:'첨부 목록에서 제거',
   submitConfirm:'최종 제출하면 답안을 다시 확인하거나 수정할 수 없습니다. 제출하시겠습니까?',finishFail:'시험 종료에 실패했습니다.',
  },
  en: {
@@ -51,7 +51,7 @@ const I18N = {
   supportPrefix:'For technical issues or inquiries, contact',supportSuffix:'.',
   leaveWarning:'Refreshing, signing out, or leaving this page during the assessment will prevent re-entry.',
   timeRemaining:'Time remaining',examHelp:'Use AI tools to solve the practical task, and submit your approach and final deliverables.',
-  questionList:'Questions',answerLabel:'Your Answer',
+  questionList:'Questions',answerLabel:'Your Answer',questionUnit:'questions',chooseFiles:'Choose files',
   answerPlaceholder:'Write your answer.',fileLabel:'Attach deliverables',
   savePending:'Waiting to save',previous:'← Previous',saveDraft:'Save draft',next:'Next →',submit:'Submit assessment →',
   finishedTitle:'Your assessment has ended.\nWe wish you the best.',
@@ -70,7 +70,7 @@ const I18N = {
   switchError:'Unable to move to the next question because your answer could not be saved.',
   maxFiles:'You can attach up to 10 files per question.',uploading:'Uploading attachments',
   candidateUploadLimit:'Maximum 50 MB per file',overSize:'exceeds 50 MB.',uploadFail:'File upload or save failed',
-  attachmentLink:'View / download file',previewFail:'Preview unavailable',removeFile:'Remove attachment',
+  attachmentLink:'Download file',previewFail:'Preview unavailable',removeFile:'Remove attachment',
   submitConfirm:'Once submitted, you cannot view or edit your answers. Submit now?',finishFail:'Could not finalize the assessment.',
  }
 };
@@ -99,6 +99,7 @@ function applyLanguage(){
  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{el.placeholder=tr(el.dataset.i18nPlaceholder);});
  document.querySelectorAll('.language-choice').forEach(btn=>{btn.setAttribute('aria-pressed',String(btn.dataset.lang===current));});
  translateSaveIndicator();
+ if(active&& !$('exam-view').hidden)$('progress-label').textContent=`${currentIndex+1} / ${activeQuestions.length} ${tr('questionUnit')}`;
  const switcher=$('language-switch');
  if(switcher)switcher.hidden=profile?.role==='admin'||!['login','candidate','exam','finished'].some(v=>!$(v+'-view').hidden);
  const user=$('header-user');if(user&&profile)user.textContent=`${profile.display_name} · ${profile.role==='admin'?'관리자':tr('candidateRole')}`;
@@ -122,6 +123,16 @@ function selectLanguage(v){
  applyLanguage();
 }
 
+// V26: UI-only admin filters; Supabase RLS continues to enforce data authorization.
+function searchTerm(id){return String($(id)?.value||'').trim().toLocaleLowerCase();}
+function includesQuery(values,term){return !term||values.some(v=>String(v??'').toLocaleLowerCase().includes(term));}
+function showFilterCount(id,shown,total,unit='건'){const node=$(id);if(node)node.textContent=`${shown} / ${total}${unit} 표시`;}
+function currentExamStatus(a,t){
+ if(t?.status)return t.status;
+ if(now()<Date.parse(a.available_from))return 'waiting';
+ if(now()>=Date.parse(a.available_until))return 'expired';
+ return 'available';
+}
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = d => d ? new Date(d).toLocaleString(language()==='en'?'en-US':'ko-KR',{hour12:false}) : '—';
@@ -217,8 +228,16 @@ function bindEvents(){
  keepTextSelectionOnToolbarClick($('bank-bold'));
  $('bank-bold').addEventListener('click',()=>boldSelectedText($('bank-body')));
  $('bank-search').addEventListener('input',renderBankList);
+ $('bank-category-filter').addEventListener('change',renderBankList);
+ $('candidate-search').addEventListener('input',renderCandidates);
+ $('template-search').addEventListener('input',renderTemplates);
+ $('progress-search').addEventListener('input',renderProgress);
+ $('progress-status').addEventListener('change',renderProgress);
+ $('submission-search').addEventListener('input',renderSubmissions);
+ $('submission-status').addEventListener('change',renderSubmissions);
  $('candidate-select-all').addEventListener('change',ev=>{
-  for(const p of all.profiles)ev.target.checked?selectedCandidateIds.add(p.id):selectedCandidateIds.delete(p.id);
+  const visible=all.profiles.filter(p=>includesQuery([p.display_name,p.username],searchTerm('candidate-search')));
+  for(const p of visible)ev.target.checked?selectedCandidateIds.add(p.id):selectedCandidateIds.delete(p.id);
   renderCandidates();
  });
  $('candidate-delete-selected').addEventListener('click',()=>bulkDeleteCandidates().catch(err=>notice(errorMessage(err),true)));
@@ -301,16 +320,19 @@ function updateCandidateBulkControls(){
  const selectable=new Set(all.profiles.map(p=>p.id));
  for(const id of selectedCandidateIds)if(!selectable.has(id))selectedCandidateIds.delete(id);
  const allCheckbox=$('candidate-select-all');
- allCheckbox.checked=all.profiles.length>0&&all.profiles.every(p=>selectedCandidateIds.has(p.id));
- allCheckbox.indeterminate=!allCheckbox.checked&&all.profiles.some(p=>selectedCandidateIds.has(p.id));
- allCheckbox.disabled=bulkDeleteRunning||!all.profiles.length;
+ const visible=all.profiles.filter(p=>includesQuery([p.display_name,p.username],searchTerm('candidate-search')));
+ allCheckbox.checked=visible.length>0&&visible.every(p=>selectedCandidateIds.has(p.id));
+ allCheckbox.indeterminate=!allCheckbox.checked&&visible.some(p=>selectedCandidateIds.has(p.id));
+ allCheckbox.disabled=bulkDeleteRunning||!visible.length;
  $('candidate-selected-count').textContent=`${selectedCandidateIds.size}명 선택됨`;
  $('candidate-delete-selected').disabled=bulkDeleteRunning||selectedCandidateIds.size===0;
 }
 function renderCandidates(){const list=$('candidate-list');blank(list);
  updateCandidateBulkControls();
- if(!all.profiles.length){list.append(newEl('p','empty','등록된 후보자가 없습니다.'));return;}
- for(const p of all.profiles){
+ const matches=all.profiles.filter(p=>includesQuery([p.display_name,p.username],searchTerm('candidate-search')));
+ showFilterCount('candidate-filter-count',matches.length,all.profiles.length,'명');
+ if(!matches.length){list.append(newEl('p','empty',all.profiles.length?'검색 결과가 없습니다.':'등록된 후보자가 없습니다.'));return;}
+ for(const p of matches){
   const row=newEl('div','manage-item bulk-row candidate-manage-row');
   const details=newEl('div','candidate-select-details');
   const checkbox=newEl('input','bulk-row-select');checkbox.type='checkbox';checkbox.checked=selectedCandidateIds.has(p.id);
@@ -440,9 +462,17 @@ async function deleteBankQuestion(b){
  if(editingBank?.id===b.id)resetBankForm();
  await refreshAdmin();notice('문제은행에서 삭제했습니다. 기존 템플릿 및 해당 답안에는 영향을 주지 않습니다.');
 }
+function refreshBankCategoryOptions(){
+ const sel=$('bank-category-filter');if(!sel)return;
+ const prev=sel.value;
+ const categories=[...new Set(all.bank.map(b=>String(b.category||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+ sel.replaceChildren(new Option('전체 분류',''),...categories.map(v=>new Option(v,v)));
+ if(!categories.includes(prev)&&prev)sel.value='';else sel.value=prev;
+}
 function filteredBank(term){
  const q=String(term||'').trim().toLocaleLowerCase();
- return all.bank.filter(b=>!q||[b.title,b.category,b.body].some(s=>String(s||'').toLocaleLowerCase().includes(q)));
+ const category=$('bank-category-filter')?.value||'';
+ return all.bank.filter(b=>(!category||b.category===category)&&(!q||[b.title,b.category,b.body].some(s=>String(s||'').toLocaleLowerCase().includes(q))));
 }
 function updateBankBulkControls(){
  const allIds=new Set(all.bank.map(b=>b.id));
@@ -456,9 +486,10 @@ function updateBankBulkControls(){
  $('bank-delete-selected').disabled=bulkDeleteRunning||!bankReady||selectedBankIds.size===0;
 }
 function renderBankList(){
- const host=$('bank-list');blank(host);updateBankBulkControls();
+ const host=$('bank-list');blank(host);refreshBankCategoryOptions();updateBankBulkControls();
  if(!bankReady)return;
  const items=filteredBank($('bank-search').value);
+ showFilterCount('bank-filter-count',items.length,all.bank.length,'개');
  if(!items.length){host.append(newEl('p','empty',all.bank.length?'검색 결과가 없습니다.':'등록된 문제가 없습니다. 위에서 먼저 문제를 등록하세요.'));return;}
  for(const b of items){
   const row=newEl('div','manage-item bulk-row'),info=newEl('div','manage-item-info'),actions=newEl('div','manage-actions');
@@ -643,8 +674,10 @@ async function saveTemplate(ev){
  }catch(err){notice('템플릿 저장 오류: '+errorMessage(err)+' 일부 변경사항이 저장되었을 수 있으니 템플릿 상세에서 확인하세요.',true);}finally{setBusy(form,false);}
 }
 function renderTemplates(){const list=$('template-list');blank(list);$('template-detail').hidden=true;
- if(!all.templates.length){list.append(newEl('p','empty','등록된 시험 템플릿이 없습니다.'));return;}
- for(const t of all.templates){
+ const templates=all.templates.filter(t=>includesQuery([t.title,t.position],searchTerm('template-search')));
+ showFilterCount('template-filter-count',templates.length,all.templates.length,'개');
+ if(!templates.length){list.append(newEl('p','empty',all.templates.length?'검색 결과가 없습니다.':'등록된 시험 템플릿이 없습니다.'));return;}
+ for(const t of templates){
   const row=newEl('div','manage-item'),info=newEl('div','manage-item-info');
   info.append(action(t.title,()=>showTemplate(t),'template-title-button'),newEl('small','',`${t.position} · ${all.questions.filter(q=>q.template_id===t.id).length}문항`));
   const buttons=newEl('div','manage-actions');
@@ -723,21 +756,41 @@ async function createAssignment(ev){ev.preventDefault();ensureAdmin();const form
  await refreshAdmin();notice('시험 배정이 완료되었습니다.');
  }catch(err){notice(errorMessage(err),true);}finally{setBusy(form,false);}
 }
-function renderProgress(){const tbody=$('progress-rows');blank(tbody);
- for(const a of [...all.assignments].sort((x,y)=>new Date(y.created_at)-new Date(x.created_at))){const t=getAttempt(a.id),p=getCandidate(a.candidate_id),tr=document.createElement('tr');
- for(const val of [`${p?.display_name||'삭제됨'} (${p?.username||''})`,a.exam_title,`${fmt(a.available_from)} ~ ${fmt(a.available_until)} / ${a.duration_minutes}분`,labelStatus(a,t)])tr.append(newEl('td','',val));
- const td=newEl('td');td.append(action('배정 삭제',()=>deleteAssignment(a),'button button-danger button-small'));tr.append(td);tbody.append(tr);}
- if(!all.assignments.length)tbody.append(emptyRow(5,'배정된 시험이 없습니다.'));
+function renderProgress(){
+ const tbody=$('progress-rows');blank(tbody);
+ const query=searchTerm('progress-search'),status=$('progress-status').value;
+ const visible=all.assignments.filter(a=>{
+  const t=getAttempt(a.id),p=getCandidate(a.candidate_id);
+  return (!status||currentExamStatus(a,t)===status)&&includesQuery([p?.display_name,p?.username,a.exam_title],query);
+ }).sort((x,y)=>new Date(y.created_at)-new Date(x.created_at));
+ showFilterCount('progress-filter-count',visible.length,all.assignments.length,'건');
+ for(const a of visible){const t=getAttempt(a.id),p=getCandidate(a.candidate_id),tr=document.createElement('tr');
+  for(const val of [`${p?.display_name||'삭제됨'} (${p?.username||''})`,a.exam_title,`${fmt(a.available_from)} ~ ${fmt(a.available_until)} / ${a.duration_minutes}분`,labelStatus(a,t)])tr.append(newEl('td','',val));
+  const td=newEl('td');td.append(action('배정 삭제',()=>deleteAssignment(a),'button button-danger button-small'));tr.append(td);tbody.append(tr);
+ }
+ if(!visible.length)tbody.append(emptyRow(5,all.assignments.length?'필터 조건에 맞는 시험이 없습니다.':'배정된 시험이 없습니다.'));
 }
 function emptyRow(n,text){const tr=document.createElement('tr'),td=newEl('td','empty',text);td.colSpan=n;tr.append(td);return tr;}
 async function deleteAssignment(a){if(!confirm(`해당 시험 배정과 답안을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`))return;
  check(await api.from('assignments').delete().eq('id',a.id));await refreshAdmin();notice('시험 배정을 삭제했습니다.');
 }
-function renderSubmissions(){const tbody=$('submission-rows');blank(tbody);
- for(const a of all.assignments){const t=getAttempt(a.id);if(!t||!closedStatuses.includes(t.status))continue;
- const p=getCandidate(a.candidate_id),tr=document.createElement('tr');for(const val of [`${p?.display_name||''} (${p?.username||''})`,a.exam_title,`${labelStatus(a,t)} · ${fmt(t.finished_at)}`])tr.append(newEl('td','',val));
- const td=newEl('td');td.append(action('답안 보기',()=>showSubmission(a)),action('PDF 다운로드',()=>exportPDF(a)));tr.append(td);tbody.append(tr);
- }if(!tbody.children.length)tbody.append(emptyRow(4,'제출된 답안이 없습니다.'));
+function renderSubmissions(){
+ const tbody=$('submission-rows');blank(tbody);
+ const query=searchTerm('submission-search'),status=$('submission-status').value;
+ const closed=all.assignments.filter(a=>{const t=getAttempt(a.id);return t&&closedStatuses.includes(t.status);});
+ const visible=closed.filter(a=>{
+  const t=getAttempt(a.id),p=getCandidate(a.candidate_id);
+  if(status&&t.status!==status)return false;
+  // Answer content is already present in the admin's authorized result set.
+  const contents=all.answers.filter(ans=>ans.assignment_id===a.id).map(ans=>ans.content);
+  return includesQuery([p?.display_name,p?.username,a.exam_title,...contents],query);
+ });
+ showFilterCount('submission-filter-count',visible.length,closed.length,'건');
+ for(const a of visible){const t=getAttempt(a.id),p=getCandidate(a.candidate_id),tr=document.createElement('tr');
+  for(const val of [`${p?.display_name||''} (${p?.username||''})`,a.exam_title,`${labelStatus(a,t)} · ${fmt(t.finished_at)}`])tr.append(newEl('td','',val));
+  const td=newEl('td');td.append(action('답안 보기',()=>showSubmission(a)),action('PDF 다운로드',()=>exportPDF(a)));tr.append(td);tbody.append(tr);
+ }
+ if(!visible.length)tbody.append(emptyRow(4,closed.length?'필터 조건에 맞는 답안이 없습니다.':'제출된 답안이 없습니다.'));
 }
 async function showSubmission(a){const box=$('answer-detail');blank(box);box.hidden=false;const p=getCandidate(a.candidate_id);
  box.append(newEl('h2','',`${p?.display_name||''} · ${a.exam_title}`));
@@ -789,7 +842,7 @@ async function switchQuestion(index){if(!active||index<0||index>=activeQuestions
 }
 async function renderQuestion(){const q=activeQuestions[currentIndex];if(!q)return;
  $('question-index-label').textContent=`${tr('question').toUpperCase()} ${String(currentIndex+1).padStart(2,'0')}`;
- blank($('question-title'));$('question-title').append(formattedQuestion(q.body));$('progress-label').textContent=`${currentIndex+1} / ${activeQuestions.length} 문항`;
+ blank($('question-title'));$('question-title').append(formattedQuestion(q.body));$('progress-label').textContent=`${currentIndex+1} / ${activeQuestions.length} ${tr('questionUnit')}`;
  const draft=draftFor(q);$('answer-input').value=draft.content;$('answer-count').textContent=`${draft.content.length} ${tr('characters')}`;$('autosave-state').textContent=tr('saveAvailable');
  $('answer-files').value='';$('prev-question').disabled=currentIndex===0;$('next-question').disabled=currentIndex===activeQuestions.length-1;
  const nav=$('question-nav');blank(nav);for(const [i,item] of activeQuestions.entries())nav.append(action(`${tr('question')} ${i+1}${activeAnswers[item.id]?.content?' ✓':''}`,()=>switchQuestion(i),'question-button'+(currentIndex===i?' active':'')));
@@ -816,14 +869,12 @@ async function appendAttachmentViews(host,bucket,files,allowRemove=false){
  for(const oldUrl of pdfObjectUrls.get(host)||[])URL.revokeObjectURL(oldUrl);pdfObjectUrls.delete(host);blank(host);
  for(const f of files){const d=newEl('div','attachment-item'),name=newEl('strong','',f.name);d.append(name);
  try{const {data,error}=await api.storage.from(bucket).createSignedUrl(f.path,120);if(error)throw error;
- const url=data.signedUrl,dlink=newEl('a','',tr('attachmentLink'));dlink.dataset.i18n='attachmentLink';dlink.href=url;dlink.target='_blank';dlink.rel='noopener noreferrer';d.append(dlink);
+ const url=data.signedUrl,dlink=newEl('a','',tr('attachmentLink'));dlink.dataset.i18n='attachmentLink';dlink.href=url;dlink.target='_blank';dlink.rel='noopener noreferrer';dlink.download=f.name;d.append(dlink);
  if(/^image\//.test(f.type||'')){const img=newEl('img');img.src=url;img.alt=f.name;d.append(img);}
  else if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)){
-  const openLink=newEl('a','','PDF 바로 보기 / 새 창');openLink.target='_blank';openLink.rel='noopener noreferrer';
   const response=await fetch(url);if(!response.ok)throw Error('PDF 파일을 가져오지 못했습니다.');
   const blob=await response.blob();const pdfUrl=URL.createObjectURL(new Blob([blob],{type:'application/pdf'}));
   let pdfs=pdfObjectUrls.get(host);if(!pdfs){pdfs=[];pdfObjectUrls.set(host,pdfs);}pdfs.push(pdfUrl);
-  openLink.href=pdfUrl;d.append(openLink);
   const iframe=newEl('iframe','pdf-preview');iframe.src=pdfUrl+'#toolbar=1&navpanes=0';iframe.title=f.name;iframe.loading='lazy';d.append(iframe);
  }
  else if(/^text\//.test(f.type||'')||/\.(txt|csv|json|md)$/i.test(f.name)){
