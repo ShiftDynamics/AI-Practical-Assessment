@@ -42,7 +42,7 @@ const I18N = {
   submitConfirm:'최종 제출하면 답안을 다시 확인하거나 수정할 수 없습니다. 제출하시겠습니까?',finishFail:'시험 종료에 실패했습니다.',
  },
  en: {
-  heroTitle:'AI Competency Assessment',step1:'01 · Sign in',step2:'02 · Complete the task',step3:'03 · Submit your work',
+  heroTitle:'AI Practical Assessment',step1:'01 · Sign in',step2:'02 · Complete the task',step3:'03 · Submit your work',
   loginTitle:'Assessment Sign-in',loginHelp:'Sign in with the user ID and password provided by the recruitment team.',
   loginIdLabel:'User ID',passwordLabel:'Password',signIn:'Sign in →',signOut:'Sign out',
   loginPlaceholder:'User ID',passwordPlaceholder:'Password',
